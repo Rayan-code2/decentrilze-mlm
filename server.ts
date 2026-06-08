@@ -28,7 +28,7 @@ if (process.env.VITE_APPWRITE_PROJECT_ID && process.env.VITE_APPWRITE_PROJECT_ID
 
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
 app.use(express.json());
 
