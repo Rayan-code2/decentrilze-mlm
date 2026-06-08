@@ -643,6 +643,136 @@ export const mockApi = {
 
       return { success: true, reward: selectedReward, wallet };
     },
+    claimRankReward: async (userId: string, rewardId: string) => {
+      if (localStorage.getItem('vite_appwrite_configured') === 'true') {
+        const response = await fetch('/api/rewards/claim', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+          },
+          body: JSON.stringify({ userId, rewardId })
+        });
+        return await response.json();
+      }
+
+      // Fallback: Pure mock simulation using localStorage
+      try {
+        const settings = await mockApi.db.getSettings() as any;
+        const wallet = await mockApi.db.getWallet(userId);
+        if (!wallet) return { success: false, message: 'Wallet not found' };
+
+        const rewardsList = settings.rank_rewards || [];
+        const reward = rewardsList.find((r: any) => r.id === rewardId);
+        if (!reward) return { success: false, message: 'Rank reward not found' };
+
+        // Check if already claimed
+        const txHistory = JSON.parse(localStorage.getItem(`spiral_transactions_${userId}`) || '[]');
+        const alreadyClaimed = txHistory.some((tx: any) => tx.description === `Rank Reward Claim: ${reward.rank_name}`);
+        if (alreadyClaimed) {
+          return { success: false, message: 'This rank reward has already been claimed.' };
+        }
+
+        // Get user purchases
+        const purchasesKey = `purchased_packages_${userId}`;
+        const activePurchases: any[] = JSON.parse(localStorage.getItem(purchasesKey) || '[]').filter((p: any) => p.is_active !== false);
+        const maxActivePackagePrice = activePurchases.reduce((max: number, p: any) => Math.max(max, Number(p.price) || 0), 0);
+
+        // Fetch downline
+        const allUsers = await mockApi.db.getAllUsers();
+        
+        const getDownlineIds = (uId: string): string[] => {
+            const list: string[] = [];
+            const directs = allUsers.filter((u: any) => String(u.referred_by || '').toLowerCase() === String(uId).toLowerCase());
+            directs.forEach((d: any) => {
+                const dId = d.id;
+                list.push(dId);
+                list.push(...getDownlineIds(dId));
+            });
+            return list;
+        };
+        const downlineIds = getDownlineIds(userId);
+        
+        // Count direct referrals
+        const directCount = allUsers.filter((u: any) => String(u.referred_by || '').toLowerCase() === String(userId).toLowerCase()).length;
+
+        // Downline count of same package
+        const requiredSelfPkg = Number(reward.min_self_package || 0);
+        let downlineSamePkgCount = 0;
+
+        if (requiredSelfPkg > 0 && downlineIds.length > 0) {
+            let count = 0;
+            downlineIds.forEach((dId: string) => {
+               const pList = JSON.parse(localStorage.getItem(`purchased_packages_${dId}`) || '[]');
+               const hasSameOrBetter = pList.some((p: any) => p.is_active !== false && Number(p.price) >= requiredSelfPkg);
+               if (hasSameOrBetter) count++;
+            });
+            downlineSamePkgCount = count;
+        }
+
+        // Calculations for Personal Business
+        const personalBusiness20 = activePurchases.reduce((acc: number, p: any) => {
+            return acc + (Number(p.price) === 20 ? Number(p.price) : 0);
+        }, 0);
+
+        // Team Business
+        let teamBusiness20 = 0;
+        if (downlineIds.length > 0) {
+            downlineIds.forEach((dId: string) => {
+               const pList = JSON.parse(localStorage.getItem(`purchased_packages_${dId}`) || '[]');
+               pList.forEach((p: any) => {
+                  if (p.is_active !== false && Number(p.price) === 20) {
+                     teamBusiness20 += 20;
+                  }
+               });
+            });
+        }
+
+        // Apply matching checks
+        const targetSelfPkg = Number(reward.min_self_package || 0);
+        const targetSamePkgDownlines = Number(reward.min_downline_same_package || 0);
+        const targetDirectsRequired = Number(reward.min_directs || 0);
+        const targetPersonalBusiness = Number(reward.personal_business || 0);
+        const targetTeamBusiness = Number(reward.team_business || 0);
+
+        if (maxActivePackagePrice < targetSelfPkg) {
+            return { success: false, message: `Your Active personal package ($${maxActivePackagePrice}) is less than required self package ($${targetSelfPkg}).` };
+        }
+        if (directCount < targetDirectsRequired) {
+            return { success: false, message: `You have ${directCount} direct referrals. Required: ${targetDirectsRequired}.` };
+        }
+        if (downlineSamePkgCount < targetSamePkgDownlines) {
+            return { success: false, message: `Only ${downlineSamePkgCount} of your downline upgraded to $${targetSelfPkg}+ package. Need ${targetSamePkgDownlines}.` };
+        }
+        if (personalBusiness20 < targetPersonalBusiness) {
+            return { success: false, message: `Your personal business of $20 nodes is $${personalBusiness20}. Required: $${targetPersonalBusiness}.` };
+        }
+        if (teamBusiness20 < targetTeamBusiness) {
+            return { success: false, message: `Your team business of $20 nodes is $${teamBusiness20}. Required: $${targetTeamBusiness}.` };
+        }
+
+        // Award
+        wallet.balance = Number((Number(wallet.balance || 0) + Number(reward.reward_amount)).toFixed(4));
+        wallet.total_earned = Number((Number(wallet.total_earned || 0) + Number(reward.reward_amount)).toFixed(4));
+
+        localStorage.setItem(`spiral_wallet_${userId}`, JSON.stringify(wallet));
+
+        // Add Transaction
+        await mockApi.db.addTransaction(userId, {
+          amount: Number(reward.reward_amount),
+          type: 'task',
+          description: `Rank Reward Claim: ${reward.rank_name}`
+        });
+
+        return { 
+          success: true, 
+          message: `Congratulations! ${reward.rank_name} claimed successfully! $${reward.reward_amount} USDT credited.`,
+          wallet
+        };
+      } catch (err: any) {
+        return { success: false, message: err.message };
+      }
+    },
     getWeeklyOffer: async () => {
       return {
         reward_amount: 500,

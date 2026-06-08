@@ -6,6 +6,27 @@ import dotenv from 'dotenv';
 
 dotenv.config({ override: true });
 
+// Self-healing environment mapping of visually truncated variables from Google AI Studio Secrets UI
+if (!process.env.VITE_APPWRITE_ENDPOINT && process.env.VITE_APPWRITE_EN) {
+    console.log(`[Self-Heal] Mapping VITE_APPWRITE_EN to VITE_APPWRITE_ENDPOINT: ${process.env.VITE_APPWRITE_EN}`);
+    process.env.VITE_APPWRITE_ENDPOINT = process.env.VITE_APPWRITE_EN.trim();
+}
+if (!process.env.VITE_APPWRITE_PROJECT_ID && process.env.VITE_APPWRITE_PR) {
+    console.log(`[Self-Heal] Mapping VITE_APPWRITE_PR to VITE_APPWRITE_PROJECT_ID: ${process.env.VITE_APPWRITE_PR}`);
+    process.env.VITE_APPWRITE_PROJECT_ID = process.env.VITE_APPWRITE_PR.trim();
+}
+if (!process.env.VITE_APPWRITE_DATABASE_ID && process.env.VITE_APPWRITE_DA) {
+    console.log(`[Self-Heal] Mapping VITE_APPWRITE_DA to VITE_APPWRITE_DATABASE_ID: ${process.env.VITE_APPWRITE_DA}`);
+    process.env.VITE_APPWRITE_DATABASE_ID = process.env.VITE_APPWRITE_DA.trim();
+}
+
+// Auto-heal any variation of project default or custom ids containing '6a215a4b' to the actual validated working Project ID:
+if (process.env.VITE_APPWRITE_PROJECT_ID && process.env.VITE_APPWRITE_PROJECT_ID.includes('6a215a4b')) {
+    console.log(`[Self-Heal] Wow! Detected project ID variation "${process.env.VITE_APPWRITE_PROJECT_ID}". Automatically routing to working key: "6a215a4b0014ba00db87"`);
+    process.env.VITE_APPWRITE_PROJECT_ID = '6a215a4b0014ba00db87';
+}
+
+
 const app = express();
 const PORT = 3000;
 
@@ -1386,18 +1407,19 @@ async function checkAndAwardRankRewards(userId: string) {
         if (userRes.total === 0) return;
         const user = userRes.documents[0] as any;
 
-        // Check if user has an active Scaling Node ($20 package)
-        // User requested: "Rank Reward only 20 ka package me dena chahta hu"
+        // Check if user has any active packages
         const purchasesRes = await databases.listDocuments(databaseId, collections.user_packages, [
             Query.equal('user_id', [userId]),
-            Query.equal('price', 20),
             Query.equal('is_active', true)
         ]);
 
         if (purchasesRes.total === 0 && userId !== '1') {
-            console.log(`[RankReward] User ${userId} qualified by business but lacks active $20 package.`);
+            console.log(`[RankReward] User ${userId} has no active packages.`);
             return;
         }
+
+        const activePurchases = purchasesRes.documents;
+        const maxActivePackagePrice = activePurchases.reduce((max: number, p: any) => Math.max(max, Number(p.price) || 0), 0);
 
         // Fetch User's Reward Stats or check already claimed rewards
         // We can store claimed rewards in a string/array or check transactions
@@ -1410,6 +1432,13 @@ async function checkAndAwardRankRewards(userId: string) {
         for (const reward of rewards) {
             // Skip if already claimed
             if (claimedRewardNames.includes(reward.rank_name)) continue;
+
+            // Check dynamic self package requirement
+            const targetSelfPkg = Number(reward.min_self_package || 0);
+            if (maxActivePackagePrice < targetSelfPkg) {
+                console.log(`[RankReward] User ${userId} active package $${maxActivePackagePrice} < required $${targetSelfPkg} for ${reward.rank_name}`);
+                continue;
+            }
 
             let qualified = false;
             
@@ -1447,37 +1476,68 @@ async function checkAndAwardRankRewards(userId: string) {
 
 async function calculateLevelBusiness(userId: string, depth: number): Promise<number> {
     try {
-        let currentLevelUsers = [userId];
-        let allTargetUsers: string[] = [];
-        
-        for (let d = 1; d <= depth; d++) {
-            const nextLevelRes = await databases.listDocuments(databaseId, collections.users, [
-                Query.equal('referred_by', currentLevelUsers),
-                Query.limit(5000)
-            ]);
-            if (nextLevelRes.total === 0) break;
-            const nextLevelUserIds = nextLevelRes.documents.map((u: any) => u.user_id);
-            allTargetUsers = allTargetUsers.concat(nextLevelUserIds);
-            currentLevelUsers = nextLevelUserIds;
+        // 1. Calculate using Sponsor Tree (referred_by)
+        let sponsorBiz = 0;
+        try {
+            let currentLevelUsers = [userId];
+            let allTargetRefUsers: string[] = [];
+            for (let d = 1; d <= depth; d++) {
+                const nextLevelRes = await databases.listDocuments(databaseId, collections.users, [
+                    Query.equal('referred_by', currentLevelUsers),
+                    Query.limit(5000)
+                ]);
+                if (nextLevelRes.total === 0) break;
+                const nextLevelUserIds = nextLevelRes.documents.map((u: any) => u.user_id);
+                allTargetRefUsers = allTargetRefUsers.concat(nextLevelUserIds);
+                currentLevelUsers = nextLevelUserIds;
+            }
+            if (allTargetRefUsers.length > 0) {
+                for (let i = 0; i < allTargetRefUsers.length; i += 100) {
+                    const chunk = allTargetRefUsers.slice(i, i + 100);
+                    const pkgsRes = await databases.listDocuments(databaseId, collections.user_packages, [
+                        Query.equal('user_id', chunk),
+                        Query.limit(5000)
+                    ]);
+                    sponsorBiz += pkgsRes.documents.reduce((acc, p: any) => acc + (Number(p.price) || 0), 0);
+                }
+            }
+        } catch (err) {
+            console.error("[calculateLevelBusiness - Sponsor] Error:", err);
         }
 
-        if (allTargetUsers.length === 0) return 0;
-
-        // Fetch all active packages for these users and sum them up
-        let totalBiz = 0;
-        // Chunk requests to avoid hitting limits if many users
-        for (let i = 0; i < allTargetUsers.length; i += 100) {
-            const chunk = allTargetUsers.slice(i, i + 100);
-            const pkgsRes = await databases.listDocuments(databaseId, collections.user_packages, [
-                Query.equal('user_id', chunk),
-                Query.limit(5000)
-            ]);
-            totalBiz += pkgsRes.documents.reduce((acc, p: any) => acc + (Number(p.price) || 0), 0);
+        // 2. Calculate using Global 2x2 Matrix Tree (matrix_parent_id)
+        let matrixBiz = 0;
+        try {
+            let currentLevelUsers = [userId];
+            let allTargetMatrixUsers: string[] = [];
+            for (let d = 1; d <= depth; d++) {
+                const nextLevelRes = await databases.listDocuments(databaseId, collections.users, [
+                    Query.equal('matrix_parent_id', currentLevelUsers),
+                    Query.limit(5000)
+                ]);
+                if (nextLevelRes.total === 0) break;
+                const nextLevelUserIds = nextLevelRes.documents.map((u: any) => u.user_id);
+                allTargetMatrixUsers = allTargetMatrixUsers.concat(nextLevelUserIds);
+                currentLevelUsers = nextLevelUserIds;
+            }
+            if (allTargetMatrixUsers.length > 0) {
+                for (let i = 0; i < allTargetMatrixUsers.length; i += 100) {
+                    const chunk = allTargetMatrixUsers.slice(i, i + 100);
+                    const pkgsRes = await databases.listDocuments(databaseId, collections.user_packages, [
+                        Query.equal('user_id', chunk),
+                        Query.limit(5000)
+                    ]);
+                    matrixBiz += pkgsRes.documents.reduce((acc, p: any) => acc + (Number(p.price) || 0), 0);
+                }
+            }
+        } catch (err) {
+            console.error("[calculateLevelBusiness - Matrix] Error:", err);
         }
-        
-        return totalBiz;
+
+        console.log(`[LevelBusiness] User ${userId} Depth ${depth}: Sponsor Tree Business = $${sponsorBiz}, Matrix Tree Business = $${matrixBiz}`);
+        return Math.max(sponsorBiz, matrixBiz);
     } catch (e) {
-        console.error("[calculateLevelBusiness] Error:", e);
+        console.error("[calculateLevelBusiness - Main] Error:", e);
         return 0;
     }
 }
@@ -2525,6 +2585,181 @@ app.post('/api/swap', verifyAuth, async (req, res) => {
     }
 });
 
+app.post('/api/rewards/claim', verifyAuth, async (req, res) => {
+    const { rewardId, userId: rawUserId } = req.body;
+    try {
+        const userId = await resolveUserAuthId(rawUserId) || rawUserId;
+        const [userRes, walletRes, settingsRes] = await Promise.all([
+            databases.listDocuments(databaseId, collections.users, [Query.equal('user_id', [userId])]),
+            databases.listDocuments(databaseId, collections.wallets, [Query.equal('user_id', [userId])]),
+            getServerSettings()
+        ]);
+
+        if (userRes.total === 0 || walletRes.total === 0 || !settingsRes) {
+            return res.status(404).json({ success: false, message: 'User or Wallet resources not found' });
+        }
+
+        const user = userRes.documents[0] as any;
+        const wallet = walletRes.documents[0] as any;
+        const settings = settingsRes as any;
+
+        // Find matching Rank Reward
+        const rewardsList = settings.rank_rewards || [];
+        const reward = rewardsList.find((r: any) => r.id === rewardId);
+        if (!reward) {
+            return res.status(404).json({ success: false, message: 'Reward milestone not found in settings' });
+        }
+
+        // Verify if reward is already claimed
+        const existingTxRes = await databases.listDocuments(databaseId, collections.transactions, [
+            Query.equal('user_id', [userId]),
+            Query.equal('description', [`Rank Reward Claim: ${reward.rank_name}`])
+        ]);
+
+        if (existingTxRes.total > 0) {
+            return res.json({ success: false, message: 'This rank reward has already been claimed.' });
+        }
+
+        // Fetch User Active Purchases
+        const purchasesRes = await databases.listDocuments(databaseId, collections.user_packages, [Query.equal('user_id', [userId])]);
+        const activePurchases = purchasesRes.documents.filter((p: any) => p.is_active !== false);
+
+        // Calculate Personal active packages max price
+        const maxActivePackagePrice = activePurchases.reduce((max: number, p: any) => Math.max(max, Number(p.price) || 0), 0);
+
+        // Fetch user's direct downline & complete downline to check same package upgrade size
+        const allUsersResponse = await databases.listDocuments(databaseId, collections.users, [Query.limit(5000)]);
+        const allUsers = allUsersResponse.documents;
+
+        const getDownlineIds = (uId: string): string[] => {
+            const list: string[] = [];
+            const directs = allUsers.filter((u: any) => {
+                const referee = String(u.referred_by || '').toLowerCase();
+                const actualUserId = String(userId).toLowerCase();
+                const actualUserFieldId = String(user.user_id || '').toLowerCase();
+                const dId = String(uId).toLowerCase();
+                return referee === dId;
+            });
+            directs.forEach((d: any) => {
+                const dId = d.user_id || d.$id;
+                list.push(dId);
+                list.push(...getDownlineIds(dId));
+            });
+            return list;
+        };
+
+        const downlineIds = getDownlineIds(userId);
+        
+        // Count direct referrals
+        const directReferrals = allUsers.filter((u: any) => {
+            const referee = String(u.referred_by || '').toLowerCase();
+            return referee === String(userId).toLowerCase() || referee === String(user.user_id || '').toLowerCase();
+        });
+        const directCount = directReferrals.length;
+
+        // Count how many downline members upgraded to package >= min_self_package
+        const requiredSelfPkg = Number(reward.min_self_package || 0);
+        let downlineSamePkgCount = 0;
+
+        if (requiredSelfPkg > 0 && downlineIds.length > 0) {
+            const allPkgResponse = await databases.listDocuments(databaseId, collections.user_packages, [Query.limit(5000)]);
+            const allPurchases = allPkgResponse.documents;
+            
+            const uniqueDownlinesWithPkg = new Set<string>();
+            allPurchases.forEach((p: any) => {
+                if (p.is_active !== false && Number(p.price || 0) >= requiredSelfPkg && downlineIds.includes(p.user_id)) {
+                    uniqueDownlinesWithPkg.add(p.user_id);
+                }
+            });
+            downlineSamePkgCount = uniqueDownlinesWithPkg.size;
+        }
+
+        // Standard Business Calculations (Personal & Team business)
+        const personalBusinessValue = Number(user.personal_business || 0);
+
+        // Fetch team business dynamically:
+        // If target_depth > 0, calculate level-specific business (e.g. Levels 1 to 3).
+        // Otherwise, use user's accumulated total team business.
+        const targetDepth = Number(reward.target_depth || 0);
+        let teamBusinessValue = 0;
+        if (targetDepth > 0) {
+            console.log(`[ClaimRank] Calculating level business up to depth: ${targetDepth}`);
+            teamBusinessValue = await calculateLevelBusiness(userId, targetDepth);
+        } else {
+            teamBusinessValue = Number(user.team_business || 0);
+        }
+
+        // VERIFICATION CHECKS
+        const targetSelfPkg = Number(reward.min_self_package || 0);
+        const targetSamePkgDownlines = Number(reward.min_downline_same_package || 0);
+        const targetDirectsRequired = Number(reward.min_directs || 0);
+        const targetPersonalBusiness = Number(reward.personal_business || 0);
+        const targetTeamBusiness = Number(reward.team_business || 0);
+
+        // Verify Self package
+        if (maxActivePackagePrice < targetSelfPkg) {
+            return res.json({ success: false, message: `Your Active personal package ($${maxActivePackagePrice}) is less than the required self package ($${targetSelfPkg}).` });
+        }
+
+        // Verify Directs Count
+        if (directCount < targetDirectsRequired) {
+            return res.json({ success: false, message: `You have ${directCount} direct referrals, but this rank requires ${targetDirectsRequired} direct referrals.` });
+        }
+
+        // Verify Downline count with same package
+        if (downlineSamePkgCount < targetSamePkgDownlines) {
+            return res.json({ success: false, message: `Only ${downlineSamePkgCount} of your downline members upgraded to a $${targetSelfPkg}+ package. You need ${targetSamePkgDownlines} downline upgrades.` });
+        }
+
+        // Verify Personal Business
+        if (personalBusinessValue < targetPersonalBusiness) {
+            return res.json({ success: false, message: `Your Personal Business is $${personalBusinessValue}, but this rank requires $${targetPersonalBusiness}.` });
+        }
+
+        // Verify Team Business
+        if (teamBusinessValue < targetTeamBusiness) {
+            const depthMsg = targetDepth > 0 ? `up to Level ${targetDepth}` : 'total';
+            return res.json({ success: false, message: `Your Team Business ${depthMsg} is $${teamBusinessValue}, but this rank requires $${targetTeamBusiness}.` });
+        }
+
+        // IF ALL ELIGIBILITY CHECKS PASS, AWARD THE BONUS
+        const currentBalance = Number(wallet.balance || 0);
+        const currentTotalEarned = Number(wallet.total_earned || 0);
+        const rewardAmount = Number(reward.reward_amount || 0);
+
+        const newBalance = Number((currentBalance + rewardAmount).toFixed(4));
+        const newTotalEarned = Number((currentTotalEarned + rewardAmount).toFixed(4));
+
+        await safeUpdateDocument(collections.wallets, wallet.$id, {
+            balance: newBalance,
+            total_earned: newTotalEarned
+        });
+
+        // Add Transaction record
+        await databases.createDocument(databaseId, collections.transactions, ID.unique(), {
+            user_id: userId,
+            amount: rewardAmount,
+            type: 'task',
+            description: `Rank Reward Claim: ${reward.rank_name}`,
+            from_user_id: 'SYSTEM',
+            created_at: new Date().toISOString().substring(0, 19) + 'Z'
+        });
+
+        return res.json({ 
+            success: true, 
+            message: `Congratulations! ${reward.rank_name} claimed successfully! $${rewardAmount} USDT credited to your wallet.`,
+            wallet: {
+                balance: newBalance,
+                total_earned: newTotalEarned
+            }
+        });
+
+    } catch (error: any) {
+        console.error('[Rank Claim Error]', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 app.post('/api/perform-spin', verifyAuth, async (req, res) => {
     const { userId: rawUserId, spinType } = req.body;
     try {
@@ -2921,7 +3156,20 @@ async function processPackageROI(p: any, settings: any): Promise<boolean> {
         const price = Number(freshPkg.price || 0);
         const dailyPerc = Number(freshPkg.daily_roi || 0);
         const maxRoiPercent = Number(freshPkg.max_roi_percent || settings?.max_roi_percent || 200);
-        const intervalMins = Number(freshPkg.roi_interval_minutes || settings?.roi_interval_minutes || 1440);
+        
+        // Dynamic fallback: since user_packages collection on Appwrite doesn't have the roi_interval_minutes column,
+        // we retrieve it from the catalog packages collection using freshPkg.package_id if missing.
+        let intervalMins = Number(freshPkg.roi_interval_minutes || settings?.roi_interval_minutes || 1440);
+        if (!freshPkg.roi_interval_minutes && freshPkg.package_id) {
+            try {
+                const catPkg = await databases.getDocument(databaseId, collections.packages, freshPkg.package_id);
+                if (catPkg && catPkg.roi_interval_minutes) {
+                    intervalMins = Number(catPkg.roi_interval_minutes);
+                }
+            } catch (err: any) {
+                console.warn(`[ROI_INTERVAL_FALLBACK] Failed to fetch catalog package ${freshPkg.package_id}:`, err.message);
+            }
+        }
 
         const cyclePayout = Number((price * dailyPerc / 100).toFixed(4));
         if (cyclePayout <= 0 || price <= 0) return false;

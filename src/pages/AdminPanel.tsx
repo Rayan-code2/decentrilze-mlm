@@ -1396,7 +1396,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                       <Trash2 size={16} />
                     </button>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-6">
                     <div className="space-y-2">
                       <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-2">Personal Business ($)</label>
                       <input 
@@ -1433,6 +1433,38 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                         value={reward.reward_amount}
                         onChange={(e) => handleUpdateReward(reward.id, 'reward_amount', Number(e.target.value))}
                         className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs text-white font-black text-emerald-400"
+                      />
+                    </div>
+                    
+                    {/* NEW FIELDS requested by user for fully dynamic qualification */}
+                    <div className="space-y-2">
+                      <label className="text-[8px] font-black text-red-400 uppercase tracking-widest ml-2">Min Self Package ($)</label>
+                      <input 
+                        type="number" 
+                        value={reward.min_self_package || 0}
+                        onChange={(e) => handleUpdateReward(reward.id, 'min_self_package', Number(e.target.value))}
+                        className="w-full bg-black/40 border border-red-500/20 rounded-xl px-4 py-3 text-xs text-white"
+                        placeholder="e.g. 20"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[8px] font-black text-red-400 uppercase tracking-widest ml-2">Min Same Pkg Downline</label>
+                      <input 
+                        type="number" 
+                        value={reward.min_downline_same_package || 0}
+                        onChange={(e) => handleUpdateReward(reward.id, 'min_downline_same_package', Number(e.target.value))}
+                        className="w-full bg-black/40 border border-red-500/20 rounded-xl px-4 py-3 text-xs text-white"
+                        placeholder="e.g. 3"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[8px] font-black text-red-400 uppercase tracking-widest ml-2">Min Direct Referrals</label>
+                      <input 
+                        type="number" 
+                        value={reward.min_directs || 0}
+                        onChange={(e) => handleUpdateReward(reward.id, 'min_directs', Number(e.target.value))}
+                        className="w-full bg-black/40 border border-red-500/20 rounded-xl px-4 py-3 text-xs text-white"
+                        placeholder="e.g. 2"
                       />
                     </div>
                     <div className="space-y-2">

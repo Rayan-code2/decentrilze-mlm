@@ -39,82 +39,67 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ user, wallet, onRefreshWallet, on
     }
   }, [wallet.balance, wallet.available_spins, isSpinning]);
 
+  // Helper to resolve a stylish emoji for each reward type
+  const getRewardEmoji = (amount: number, label: string): string => {
+    const cleanLabel = (label || '').trim().toUpperCase();
+    const amt = Number(amount);
+
+    // 1. If the label already has an emoji, extract and return it
+    const emojiRegex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
+    const match = cleanLabel.match(emojiRegex);
+    if (match && match.length > 0) {
+      return match[0];
+    }
+
+    // 2. Custom Match rules
+    if (cleanLabel.includes('JACKPOT')) return '🏆';
+    if (cleanLabel.includes('ZERO') || cleanLabel.includes('TRY AGAIN') || cleanLabel.includes('NULL') || cleanLabel.includes('VOID') || cleanLabel.includes('EMPTY') || amt === 0) {
+      if (cleanLabel.includes('ZERO')) return '😢';
+      if (cleanLabel.includes('BOOM') || cleanLabel.includes('BOMB') || cleanLabel.includes('EXPLODE')) return '💥';
+      return '💀';
+    }
+
+    if (amt === 100) return '👑';
+    if (amt === 50) return '💎';
+    if (amt === 20) return '🔥';
+    if (amt === 15) return '⭐';
+    if (amt === 10) return '🎁';
+    if (amt === 5) return '💵';
+    if (amt === 2) return '🪙';
+    if (amt === 1) return '⚡';
+
+    if (amt > 50) return '👑';
+    if (amt > 20) return '💎';
+    if (amt > 10) return '🔥';
+    if (amt > 0) return '🪙';
+
+    return '⚡';
+  };
+
   // Helper to detect if a string is an emoji or a special keyword for icons
   const getSegmentContent = (reward: SpinReward, isBlue: boolean) => {
-    const isPrize = reward.amount > 0;
     const label = reward.amount > 0 ? `${reward.amount}$` : (reward.label || 'NULL');
-    const upperLabel = label.toUpperCase();
+    const emoji = getRewardEmoji(reward.amount, reward.label || label);
 
-    // Text Style: Always Bold Red for special segments or labels
-    const textBaseClass = `font-display font-black tracking-tighter text-red-500 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]`;
-
-    if (isPrize) {
-      return (
+    return (
+      <div 
+        className="flex flex-col items-center justify-center gap-1.5"
+        style={{ transform: 'rotate(90deg)' }}
+      >
+        {/* Emoji standing beautifully above/below */}
+        <span className="text-4xl filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] select-none">
+          {emoji}
+        </span>
+        {/* Value tag */}
         <span 
-          className={`${textBaseClass} text-3xl`}
+          className="font-display font-black tracking-tighter text-red-500 text-lg uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
           style={{ 
-            transform: 'rotate(90deg)',
-            display: 'inline-block',
             whiteSpace: 'nowrap',
-            textShadow: '0 0 15px rgba(239, 68, 68, 0.4)'
+            textShadow: '0 0 10px rgba(239, 68, 68, 0.4), 0 0 2px black'
           }}
         >
           {label}
         </span>
-      );
-    }
-
-    // Check for Emojis
-    const emojiRegex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
-    if (emojiRegex.test(label) && label.length <= 4) {
-      return (
-        <span className="text-5xl drop-shadow-lg text-red-500" style={{ transform: 'rotate(90deg)', display: 'inline-block' }}>
-          {label}
-        </span>
-      );
-    }
-
-    // High-Tech Icons based on keywords
-    const iconProps = { 
-      size: 48, 
-      className: 'text-red-600',
-      style: { transform: 'rotate(90deg)', filter: 'drop-shadow(0 0 10px rgba(220, 38, 38, 0.5))' }
-    };
-
-    if (upperLabel.includes('GHOST')) return <Ghost {...iconProps} />;
-    if (upperLabel.includes('SKULL')) return <Skull {...iconProps} />;
-    if (upperLabel.includes('ZAP')) return <Zap {...iconProps} />;
-    if (upperLabel.includes('BOOM') || upperLabel.includes('BOMB')) return <Bomb {...iconProps} />;
-    if (upperLabel.includes('SAD') || upperLabel.includes('FROWN') || upperLabel.includes('BAD')) return <Frown {...iconProps} />;
-    if (upperLabel.includes('VOID') || upperLabel.includes('NULL') || upperLabel.includes('EMPTY')) return <Ban {...iconProps} />;
-    if (upperLabel.includes('GIFT')) return <Gift {...iconProps} />;
-    if (upperLabel.includes('SUPER') || upperLabel.includes('JACKPOT') || upperLabel.includes('STAR')) return <Sparkles {...iconProps} />;
-    if (upperLabel.includes('ROCKET') || upperLabel.includes('FLY')) return <Rocket {...iconProps} />;
-    if (upperLabel.includes('WIN') || upperLabel.includes('TROPHY')) return <Trophy {...iconProps} />;
-    if (upperLabel.includes('COIN') || upperLabel.includes('CASH')) return <Coins {...iconProps} />;
-    if (upperLabel.includes('FIRE') || upperLabel.includes('HOT')) return <Flame {...iconProps} />;
-    if (upperLabel.includes('LOVE') || upperLabel.includes('HEART')) return <Heart {...iconProps} />;
-    if (upperLabel.includes('KING') || upperLabel.includes('CROWN')) return <Crown {...iconProps} />;
-    if (upperLabel.includes('LOSS') || upperLabel.includes('DOWN') || upperLabel.includes('LOSE')) return <TrendingDown {...iconProps} />;
-    if (upperLabel.includes('TRY') || upperLabel.includes('NEXT') || upperLabel.includes('AGAIN')) return <RotateCcw {...iconProps} />;
-
-    // Fallback to text segments (Stack pattern)
-    const words = label.split(' ');
-    return (
-      <div 
-        className="flex flex-col items-center justify-center gap-1"
-        style={{ transform: 'rotate(90deg)' }}
-      >
-        {words.map((word, i) => (
-          <span 
-            key={i}
-            className={`font-mono font-black uppercase tracking-[0.1em] leading-none text-red-600 ${words.length > 2 ? 'text-[10px]' : 'text-[14px]'}`}
-            style={{ textShadow: '0 0 10px rgba(220, 38, 38, 0.4)' }}
-          >
-            {word}
-          </span>
-        ))}
-        <div className="w-6 h-[2px] mt-1 bg-red-600/30"></div>
       </div>
     );
   };
@@ -533,31 +518,52 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ user, wallet, onRefreshWallet, on
               {history.slice(0, 3).map((item) => (
                 <div key={item.id} className="flex justify-between items-center p-4 bg-blue-900/20 border border-white/5 rounded-xl font-mono text-[10px]">
                   <span className="text-white/10">[{new Date(item.created_at).toLocaleTimeString([], { hour12: false })}]</span>
-                  <span className="text-white/40 uppercase tracking-wider">Sync: <span className="text-red-500 font-bold">{item.reward_label}</span></span>
+                  <span className="text-white/40 uppercase tracking-wider flex items-center gap-1.5">
+                    Sync: <span className="text-red-500 font-bold flex items-center gap-1">{getRewardEmoji(item.amount, item.reward_label)} {item.reward_label}</span>
+                  </span>
                 </div>
               ))}
             </div>
           </div>
         </div>
       </div>
-
+ 
       {/* RESULT OVERLAY - TECH STYLE */}
       {result && (
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 flex items-center justify-center z-[100] bg-obsidian/95 backdrop-blur-2xl p-4 sm:p-6"
+          className="fixed inset-0 flex items-center justify-center z-[100] bg-black/90 backdrop-blur-2xl p-4 sm:p-6"
         >
           <motion.div 
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            className="border border-white/10 p-8 sm:p-12 rounded-3xl flex flex-col items-center space-y-6 sm:space-y-10 max-w-md sm:max-w-xl w-full relative bg-black shadow-[0_0_100px_rgba(204,255,0,0.1)] overflow-hidden"
+            className="border border-white/10 p-8 sm:p-12 rounded-3xl flex flex-col items-center space-y-6 sm:space-y-8 max-w-md sm:max-w-xl w-full relative bg-gray-950 shadow-[0_0_100px_rgba(204,255,0,0.15)] overflow-hidden text-center"
           >
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#ccff00] to-transparent shadow-[0_0_15px_#ccff00]"></div>
             
-            <div className="text-center space-y-3 sm:space-y-4">
+            <div className="text-center space-y-3 sm:space-y-4 flex flex-col items-center">
               <span className="text-[8px] sm:text-[10px] font-mono font-black uppercase tracking-[0.6em] sm:tracking-[1em] text-[#ccff00] animate-pulse">Sync Successful</span>
-              <h4 className="text-5xl sm:text-8xl font-display font-black tracking-tighter text-white drop-shadow-[0_0_30px_rgba(204,255,0,0.4)]">{result.label}</h4>
+              
+              {/* Giant animated matching emoji */}
+              <motion.div 
+                animate={{ 
+                  scale: [1, 1.15, 1],
+                  rotate: [0, 8, -8, 0]
+                }}
+                transition={{ 
+                  duration: 2.5, 
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+                className="text-8xl sm:text-9xl my-4 select-none filter drop-shadow-[0_10px_20px_rgba(255,255,255,0.2)]"
+              >
+                {getRewardEmoji(result.amount, result.label)}
+              </motion.div>
+
+              <h4 className="text-5xl sm:text-7xl font-display font-black tracking-tighter text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+                {result.label}
+              </h4>
               <p className="text-[8px] sm:text-[9px] font-mono text-slate-500 uppercase tracking-[0.3em] sm:tracking-[0.4em]">Resource allocated to main wallet</p>
             </div>
 

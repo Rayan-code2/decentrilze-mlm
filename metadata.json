@@ -1,5 +1,6 @@
 {
   "name": "Decentralized Protocol",
   "description": "Next-gen Decentralized MLM Protocol",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

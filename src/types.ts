@@ -110,6 +110,9 @@ export interface RankReward {
   target_depth?: number; // 0 = Total Team, 1-10 = Specific Level
   reward_amount: number;
   icon_type: 'zap' | 'star' | 'award' | 'shield' | 'gift';
+  min_self_package?: number;
+  min_downline_same_package?: number;
+  min_directs?: number;
 }
 
 export interface SpinReward {

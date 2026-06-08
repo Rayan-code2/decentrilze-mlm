@@ -24,7 +24,30 @@ export const appwriteService = {
     }
   },
   login: async (email: string, pass: string) => {
-    return await account.createEmailPasswordSession(email, pass);
+    try {
+      // Step 1: Try deleting current session to prevent "Creation of a session is prohibited..."
+      await account.deleteSession('current');
+      // Briefly wait to let cookie propagation settle
+      await new Promise(resolve => setTimeout(resolve, 300));
+    } catch (e) {
+      // Ignore if no active session
+    }
+
+    try {
+      return await account.createEmailPasswordSession(email, pass);
+    } catch (error: any) {
+      // If still throwing because of active session, attempt a deep clear of all sessions
+      if (error.message?.includes('prohibited') || error.message?.includes('session is active') || error.code === 401) {
+        try {
+          await account.deleteSessions(); // clears ALL active sessions
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return await account.createEmailPasswordSession(email, pass);
+        } catch (retryErr) {
+          throw error; // throw original error if retry fails
+        }
+      }
+      throw error;
+    }
   },
   register: async (email: string, pass: string, name: string, referredBy?: string, mobile?: string) => {
     try {
@@ -738,6 +761,18 @@ export const appwriteService = {
       }));
     } catch (error) {
       return [];
+    }
+  },
+  claimRankReward: async (userId: string, rewardId: string) => {
+    try {
+      const response = await fetch('/api/rewards/claim', {
+        method: 'POST',
+        headers: await appwriteService.getAuthHeaders(),
+        body: JSON.stringify({ userId, rewardId })
+      });
+      return await response.json();
+    } catch (error: any) {
+      return { success: false, message: error.message };
     }
   },
   selfHealSchema: async () => {
