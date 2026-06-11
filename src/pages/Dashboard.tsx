@@ -310,10 +310,10 @@ const Dashboard: React.FC<DashboardProps> = ({
     return user.name;
   }, [user.name, user.email]);
 
-  const referralLink = useMemo(() => 
-    `${window.location.origin}/?ref=${user.id}`, 
-    [user.id]
-  );
+  const referralLink = useMemo(() => {
+    const baseUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
+    return `${baseUrl}/?ref=${user.id}`;
+  }, [user.id]);
 
   const sortedPackages = useMemo(() => {
     return [...packages].sort((a, b) => a.price - b.price);

@@ -3524,7 +3524,17 @@ async function startServer() {
         if (process.env.NODE_ENV !== 'production') {
             console.log('[Server] Initializing Vite middleware...');
             const vite = await createViteServer({
-                server: { middlewareMode: true },
+                server: { 
+                    middlewareMode: true,
+                    allowedHosts: [
+                        'cryptospiral.online',
+                        'www.cryptospiral.online',
+                        '.cryptospiral.online',
+                        'localhost',
+                        '127.0.0.1',
+                        '72.61.244.96'
+                    ]
+                },
                 appType: 'spa',
             });
             app.use(vite.middlewares);

@@ -4,23 +4,37 @@ import { User, Wallet, MLMPackage, Transaction, Settings, ExchangerRequest, Purc
 export const appwriteService = {
   // Auth
   getCurrentUser: async () => {
+    let authUserEmail = '';
+    let authUserName = '';
     try {
       const user = await account.get();
+      authUserEmail = user.email;
+      authUserName = user.name || '';
+    } catch (error) {
+      // Normal unauthenticated check on startup
+      return null;
+    }
+
+    try {
       // Fetch additional user data from databases
       const response = await databases.listDocuments(
         APPWRITE_CONFIG.databaseId,
         APPWRITE_CONFIG.collections.users,
-        [Query.equal('email', [user.email])]
+        [Query.equal('email', [authUserEmail])]
       );
-      if (response.documents.length === 0) return null;
+      if (response.documents.length === 0) {
+        throw new Error(`Profile document not found! Account '${authUserEmail}' exists in Appwrite Auth, but no matching document was found in database '${APPWRITE_CONFIG.databaseId}' under collection '${APPWRITE_CONFIG.collections.users}'. Please check if your registration was successful or if there is a database ID mismatch between frontend and backend.`);
+      }
       const doc = response.documents[0];
       return { 
-        name: user.name || doc.name || user.email.split('@')[0], 
+        name: authUserName || doc.name || authUserEmail.split('@')[0], 
         ...doc, 
         id: doc.$id 
       } as unknown as User;
-    } catch (error) {
-      return null;
+    } catch (error: any) {
+      console.error("[getCurrentUser Error Details]:", error);
+      // Throw a friendly instructions error so the exact missing permission scope is visible on screen
+      throw new Error(`Appwrite DB Error: ${error.message || error}. Please ensure the collection '${APPWRITE_CONFIG.collections.users}' in database '${APPWRITE_CONFIG.databaseId}' exists and has read permissions enabled for role "Any" or "All Users" / "auth users" in your Appwrite Console under Settings > Permissions.`);
     }
   },
   login: async (email: string, pass: string) => {
@@ -73,7 +87,8 @@ export const appwriteService = {
   },
   requestPasswordReset: async (email: string) => {
     try {
-      const url = `${window.location.origin}/reset-password`;
+      const baseUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
+      const url = `${baseUrl}/reset-password`;
       await account.createRecovery(email, url);
       return { success: true, message: 'Password reset link sent to your email.' };
     } catch (error: any) {
