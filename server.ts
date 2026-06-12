@@ -3599,14 +3599,7 @@ async function startServer() {
             const vite = await createViteServer({
                 server: { 
                     middlewareMode: true,
-                    allowedHosts: [
-                        'cryptospiral.online',
-                        'www.cryptospiral.online',
-                        '.cryptospiral.online',
-                        'localhost',
-                        '127.0.0.1',
-                        '72.61.244.96'
-                    ]
+                    allowedHosts: true
                 },
                 appType: 'spa',
             });
