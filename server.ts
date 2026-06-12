@@ -3604,8 +3604,7 @@ async function verifyAndSelfHealAppwriteCollections() {
     console.log('[Server] [Self-Heal] Verifying connection to Appwrite collections...');
     try {
         if (!process.env.APPWRITE_API_KEY) {
-            console.warn('[Server] [Self-Heal] APPWRITE_API_KEY is not configured! Skipping collection self-heal.');
-            return;
+            console.warn('[Server] [Self-Heal] Note: APPWRITE_API_KEY is not defined. Proceeding with public/auth session check anyway.');
         }
 
         // Test user_packages vs purchases
