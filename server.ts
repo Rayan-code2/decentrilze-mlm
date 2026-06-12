@@ -3621,9 +3621,34 @@ async function startServer() {
             });
         }
 
-        app.listen(PORT, '0.0.0.0', () => {
-            console.log(`[Server] Success! Running on http://0.0.0.0:${PORT}`);
-            
+        // Listen on BOTH port 3000 and port 3005 for ultimate VPS compatibility (prevents Nginx 502/Bad Gateway)
+        // If one port is already in use by another app, we gracefully ignore and bind to the available one.
+        const portsToTry = [3000, 3005];
+        if (process.env.PORT) {
+            const envPort = parseInt(process.env.PORT);
+            if (!portsToTry.includes(envPort)) {
+                portsToTry.unshift(envPort);
+            }
+        }
+
+        let atLeastOneBound = false;
+        for (const portToTry of portsToTry) {
+            const success = await new Promise((resolve) => {
+                const s = app.listen(portToTry, '0.0.0.0', () => {
+                    console.log(`[Server] Success! Running on http://0.0.0.0:${portToTry}`);
+                    resolve(true);
+                });
+                s.on('error', (err: any) => {
+                    console.warn(`[Server] Warning: Could not bind to port ${portToTry}: ${err.message}`);
+                    resolve(false);
+                });
+            });
+            if (success) {
+                atLeastOneBound = true;
+            }
+        }
+
+        if (atLeastOneBound) {
             // Start the Global ROI background worker (Optimized: runs every 10 minutes to significantly reduce server load)
             setInterval(() => {
                 distributeGlobalROIWorker();
@@ -3631,7 +3656,9 @@ async function startServer() {
             
             // Initial run
             distributeGlobalROIWorker();
-        });
+        } else {
+            console.error(`[Server] CRITICAL: Could not bind to any of the ports: ${JSON.stringify(portsToTry)}`);
+        }
 
         // Dedicated trigger route for Vercel Cron or Appwrite Cron (Secured)
         app.get('/api/system/massive-roi-trigger', async (req, res) => {
