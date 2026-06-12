@@ -73,9 +73,12 @@ export const isAppwriteConfigured = () => {
     if (localStorage.getItem('spiral_use_mock_api') === 'true') {
         return false;
     }
-    // If the project ID is not the placeholder, it's considered configured
-    const projectId = getProjectId();
-    return projectId !== 'YOUR_PROJECT_ID' && projectId !== '';
+    // Only return true if an actual project ID is supplied explicitly via environment variables
+    const rawProjectId = import.meta.env.VITE_APPWRITE_PROJECT_ID || import.meta.env.VITE_APPWRITE_PR;
+    if (!rawProjectId || rawProjectId.trim() === '' || rawProjectId === 'YOUR_PROJECT_ID') {
+        return false;
+    }
+    return true;
 };
 
 export { ID, Query } from 'appwrite';
