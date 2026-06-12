@@ -1,6 +1,29 @@
 /// <reference types="vite/client" />
 import { Client, Account, Databases, Storage, Functions } from 'appwrite';
 
+// Silence annoying Appwrite SDK version mismatch warnings in the browser console
+if (typeof window !== 'undefined') {
+    const originalWarn = console.warn;
+    const originalLog = console.log;
+    const shouldSuppress = (msg: any) => {
+        if (typeof msg === 'string') {
+            return msg.includes('The current SDK is built for Appwrite') || 
+                   msg.includes('current Appwrite server version') || 
+                   msg.includes('Please downgrade your SDK') ||
+                   msg.includes('Appwrite version: https://appwrite.io');
+        }
+        return false;
+    };
+    console.warn = function (...args: any[]) {
+        if (args.length > 0 && shouldSuppress(args[0])) return;
+        originalWarn.apply(console, args);
+    };
+    console.log = function (...args: any[]) {
+        if (args.length > 0 && shouldSuppress(args[0])) return;
+        originalLog.apply(console, args);
+    };
+}
+
 const getEndpoint = () => {
     const envEndpoint = import.meta.env.VITE_APPWRITE_ENDPOINT || import.meta.env.VITE_APPWRITE_EN || 'https://sgp.cloud.appwrite.io/v1';
     // Self-healing proxy: if browser is running over HTTPS but Appwrite endpoint is cleartext HTTP,

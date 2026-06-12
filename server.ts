@@ -1,10 +1,40 @@
+import './suppress-warnings';
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { Client, Databases, ID, Query, Users, Account } from 'node-appwrite';
 import dotenv from 'dotenv';
+import fs from 'fs';
 
-dotenv.config({ override: true });
+// Robust self-healing dotenv resolution for Linux VPS (to prevent PM2 working directory mismatch)
+const envPaths = [
+    path.resolve(process.cwd(), '.env'),
+    path.join(__dirname, '.env'),
+    path.join(__dirname, '../.env'),
+    path.join(__dirname, '../../.env'),
+    '/root/mlm/.env',
+    '/root/mlm-server/.env'
+];
+
+let loadedPath = '';
+for (const envPath of envPaths) {
+    try {
+        if (fs.existsSync(envPath)) {
+            dotenv.config({ path: envPath, override: true });
+            loadedPath = envPath;
+            break;
+        }
+    } catch (err) {
+        // Safe skip on permission issues
+    }
+}
+
+if (loadedPath) {
+    console.log(`[Self-Heal] Wow! Dotenv successfully loaded settings from: "${loadedPath}"`);
+} else {
+    dotenv.config({ override: true });
+    console.warn(`[Self-Heal] Warning: No explicit .env file found in candidates: ${JSON.stringify(envPaths)}. Defaulting to standard process.env.`);
+}
 
 // Self-healing environment mapping of visually truncated variables from Google AI Studio Secrets UI
 if (!process.env.VITE_APPWRITE_ENDPOINT && process.env.VITE_APPWRITE_EN) {
@@ -119,7 +149,7 @@ const collections = {
     wallets: process.env.VITE_APPWRITE_WALLETS_COLLECTION_ID || 'wallets',
     transactions: process.env.VITE_APPWRITE_TRANSACTIONS_COLLECTION_ID || 'transactions',
     purchases: process.env.VITE_APPWRITE_PURCHASES_COLLECTION_ID || 'purchases',
-    user_packages: process.env.VITE_APPWRITE_USER_PACKAGES_COLLECTION_ID || 'user_packages',
+    user_packages: process.env.VITE_APPWRITE_USER_PACKAGES_COLLECTION_ID || process.env.VITE_APPWRITE_PURCHASES_COLLECTION_ID || 'user_packages',
     packages: process.env.VITE_APPWRITE_PACKAGES_COLLECTION_ID || 'packages',
     settings: process.env.VITE_APPWRITE_SETTINGS_COLLECTION_ID || 'settings',
     exchanger_requests: process.env.VITE_APPWRITE_EXCHANGER_REQUESTS_COLLECTION_ID || 'exchanger_requests',
