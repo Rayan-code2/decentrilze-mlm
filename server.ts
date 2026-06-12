@@ -82,7 +82,17 @@ app.use(express.json());
 // Proxy client-side Appwrite calls to bypass HTTPS mixed content (HTTP IP blocking)
 app.all('/appwrite-api/*', async (req: any, res: any) => {
     const targetEndpoint = (process.env.VITE_APPWRITE_ENDPOINT || 'https://sgp.cloud.appwrite.io/v1').replace(/\/$/, '');
-    const pathSuffix = req.path.replace(/^\/appwrite-api/, '');
+    let pathSuffix = req.path.replace(/^\/appwrite-api/, '');
+    
+    // Auto-heal path: if client is querying '/collections/purchases' but collections.user_packages is 'user_packages'
+    if (collections.user_packages === 'user_packages' && pathSuffix.includes('/collections/purchases')) {
+        console.log(`[Proxy Auto-Heal] Rewriting path collections/purchases to collections/user_packages in client request`);
+        pathSuffix = pathSuffix.replace('/collections/purchases', '/collections/user_packages');
+    } else if (collections.user_packages === 'purchases' && pathSuffix.includes('/collections/user_packages')) {
+        console.log(`[Proxy Auto-Heal] Rewriting path collections/user_packages to collections/purchases in client request`);
+        pathSuffix = pathSuffix.replace('/collections/user_packages', '/collections/purchases');
+    }
+
     const queryStr = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
     const targetUrl = `${targetEndpoint}${pathSuffix}${queryStr}`;
 
@@ -3590,6 +3600,49 @@ async function distributeGlobalROIWorker() {
     }
 }
 
+async function verifyAndSelfHealAppwriteCollections() {
+    console.log('[Server] [Self-Heal] Verifying connection to Appwrite collections...');
+    try {
+        if (!process.env.APPWRITE_API_KEY) {
+            console.warn('[Server] [Self-Heal] APPWRITE_API_KEY is not configured! Skipping collection self-heal.');
+            return;
+        }
+
+        // Test user_packages vs purchases
+        try {
+            console.log(`[Server] [Self-Heal] Testing collection: "${collections.user_packages}"`);
+            await databases.listDocuments(databaseId, collections.user_packages, [Query.limit(1)]);
+            console.log(`[Server] [Self-Heal] SUCCESS: Verified collection "${collections.user_packages}" is accessible.`);
+        } catch (err: any) {
+            console.warn(`[Server] [Self-Heal] Querying "${collections.user_packages}" failed:`, err.message);
+            
+            // If the mismatch is indeed that "purchases" is not found, let's swap to "user_packages" and test
+            if (collections.user_packages !== 'user_packages' && (err.message?.includes('not found') || err.message?.includes('could not be found') || err.message?.includes('Collection with the requested ID'))) {
+                console.log(`[Server] [Self-Heal] Attempting fallback collection ID: "user_packages"`);
+                try {
+                    await databases.listDocuments(databaseId, 'user_packages', [Query.limit(1)]);
+                    collections.user_packages = 'user_packages';
+                    console.log(`[Server] [Self-Heal] SUCCESS! Swap worked. Configured collections.user_packages to "user_packages".`);
+                } catch (subErr: any) {
+                    console.error(`[Server] [Self-Heal] Fallback collection "user_packages" also failed:`, subErr.message);
+                }
+            } else if (collections.user_packages === 'user_packages' && (err.message?.includes('not found') || err.message?.includes('could not be found') || err.message?.includes('Collection with the requested ID'))) {
+                // If "user_packages" fails but maybe they named it "purchases" instead?
+                console.log(`[Server] [Self-Heal] Attempting fallback collection ID: "purchases"`);
+                try {
+                    await databases.listDocuments(databaseId, 'purchases', [Query.limit(1)]);
+                    collections.user_packages = 'purchases';
+                    console.log(`[Server] [Self-Heal] SUCCESS! Swap worked. Configured collections.user_packages to "purchases".`);
+                } catch (subErr: any) {
+                    console.error(`[Server] [Self-Heal] Fallback collection "purchases" also failed:`, subErr.message);
+                }
+            }
+        }
+    } catch (globalErr: any) {
+        console.error('[Server] [Self-Heal] Error in verifying collections:', globalErr.message);
+    }
+}
+
 async function startServer() {
     console.log('[Server] Starting server initialization...');
     try {
@@ -3627,9 +3680,12 @@ async function startServer() {
         }
 
         // Let the server listen on the standard PORT (loaded from process.env.PORT or defaulting to 3000)
-        app.listen(PORT, '0.0.0.0', () => {
+        app.listen(PORT, '0.0.0.0', async () => {
             console.log(`[Server] Success! Running on http://0.0.0.0:${PORT}`);
             
+            // Run collection verification and self-healing immediately on boot
+            await verifyAndSelfHealAppwriteCollections();
+
             // Start the Global ROI background worker (Optimized: runs every 10 minutes to significantly reduce server load)
             setInterval(() => {
                 distributeGlobalROIWorker();

@@ -60,7 +60,7 @@ export const APPWRITE_CONFIG = {
     collections: {
         users: import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID || 'users',
         packages: import.meta.env.VITE_APPWRITE_PACKAGES_COLLECTION_ID || 'packages',
-        purchases: import.meta.env.VITE_APPWRITE_PURCHASES_COLLECTION_ID || 'user_packages',
+        purchases: import.meta.env.VITE_APPWRITE_USER_PACKAGES_COLLECTION_ID || import.meta.env.VITE_APPWRITE_PURCHASES_COLLECTION_ID || 'user_packages',
         goldQueue: import.meta.env.VITE_APPWRITE_GOLD_QUEUE_COLLECTION_ID || 'gold_queue',
         wallets: import.meta.env.VITE_APPWRITE_WALLETS_COLLECTION_ID || 'wallets',
         transactions: import.meta.env.VITE_APPWRITE_TRANSACTIONS_COLLECTION_ID || 'transactions',
