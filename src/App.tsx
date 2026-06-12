@@ -4,7 +4,7 @@ import { mockApi } from './lib/mockApi';
 import { appwriteService } from './services/appwriteService';
 import { BRAND_CONFIG } from './brandConfig';
 import { MLM_CONFIG } from './constants';
-import { isAppwriteConfigured, client, APPWRITE_CONFIG } from './lib/appwrite';
+import { isAppwriteConfigured, client, APPWRITE_CONFIG, getEndpoint, getProjectId } from './lib/appwrite';
 import { AlertTriangle, LogOut, LayoutDashboard, Share2, Layers, Repeat, CheckSquare, History, Pickaxe, ShieldAlert, Send } from 'lucide-react';
 
 import Dashboard from './pages/Dashboard';
@@ -65,7 +65,15 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : null;
   });
   const [loading, setLoading] = useState(true);
+  const [initTimeoutReached, setInitTimeoutReached] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitTimeoutReached(true);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
   const [activeTab, setActiveTab] = useState('wallet');
   const [exchangerSubTab, setExchangerSubTab] = useState<'topup' | 'withdraw'>('topup');
   const [wallet, setWallet] = useState<Wallet>({ id: '', user_id: '', balance: 0, total_earned: 0, total_withdrawn: 0 });
@@ -289,13 +297,53 @@ const App: React.FC = () => {
 
   if (loading && !currentUser) {
     return (
-      <div className="min-h-screen bg-obsidian flex flex-col items-center justify-center gap-6 text-neon-cyan">
-        <div className="relative">
+      <div className="min-h-screen bg-obsidian flex flex-col items-center justify-center p-6 text-neon-cyan">
+        <div className="relative mb-4">
           <div className="w-20 h-20 border-2 border-neon-cyan/20 rounded-full"></div>
           <div className="absolute inset-0 w-20 h-20 border-2 border-neon-cyan border-t-transparent rounded-full animate-spin"></div>
           <div className="absolute inset-4 bg-neon-cyan/10 rounded-full blur-xl animate-pulse"></div>
         </div>
-        <span className="font-black uppercase tracking-[0.5em] text-[10px] animate-pulse">Syncing with Mainframe...</span>
+        <span className="font-black uppercase tracking-[0.5em] text-[10px] animate-pulse mb-2">Syncing with Mainframe...</span>
+        
+        {initTimeoutReached && (
+          <div className="max-w-md w-full bg-slate-900/90 border border-red-500/30 rounded-xl p-6 mt-4 shadow-2xl backdrop-blur-md text-slate-300">
+            <h3 className="text-red-400 font-bold uppercase tracking-wider text-sm flex items-center gap-2 mb-3">
+              <ShieldAlert className="w-5 h-5 text-red-500" />
+              Connection Diagnostics
+            </h3>
+            <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+              Mainframe sync is taking longer than expected. If your Appwrite server is inactive or misconfigured, you can bypass this screen and run in local simulation mode.
+            </p>
+            
+            <div className="bg-slate-950/80 p-3 rounded-lg border border-slate-800 font-mono text-[10px] space-y-1 mb-5">
+              <div><span className="text-red-400">Endpoint:</span> {getEndpoint()}</div>
+              <div><span className="text-blue-400">Project:</span> {getProjectId()}</div>
+              <div><span className="text-purple-400">Mode:</span> {isLive ? 'LIVE' : 'SIMULATION MOCK'}</div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  localStorage.setItem('spiral_use_mock_api', 'true');
+                  window.location.reload();
+                }}
+                className="w-full bg-neon-cyan/20 hover:bg-neon-cyan/30 text-neon-cyan border border-neon-cyan/50 py-2.5 px-4 rounded-lg font-mono font-bold text-xs transition-all tracking-wider text-center cursor-pointer"
+              >
+                [ FORCE LOCAL MOCK MODE ]
+              </button>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('spiral_user');
+                  localStorage.removeItem('spiral_use_mock_api');
+                  window.location.reload();
+                }}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 px-4 rounded-lg font-mono font-bold text-xs transition-all tracking-wider text-center cursor-pointer"
+              >
+                [ RESET SESSION & RETRY ]
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

@@ -3593,19 +3593,31 @@ async function distributeGlobalROIWorker() {
 async function startServer() {
     console.log('[Server] Starting server initialization...');
     try {
-        // Vite middleware for development
-        if (process.env.NODE_ENV !== 'production') {
+        // Automatically treat as production if executed from compiled bundle
+        const isCompiledBundle = typeof __filename !== 'undefined' && (__filename.endsWith('server.cjs') || __filename.includes('dist'));
+        const isProduction = process.env.NODE_ENV === 'production' || isCompiledBundle;
+
+        if (!isProduction) {
             console.log('[Server] Initializing Vite middleware...');
-            const vite = await createViteServer({
-                server: { 
-                    middlewareMode: true,
-                    allowedHosts: true
-                },
-                appType: 'spa',
-            });
-            app.use(vite.middlewares);
-            console.log('[Server] Vite middleware initialized.');
+            try {
+                const vite = await createViteServer({
+                    server: { 
+                        middlewareMode: true,
+                        allowedHosts: true
+                    },
+                    appType: 'spa',
+                });
+                app.use(vite.middlewares);
+                console.log('[Server] Vite middleware initialized.');
+            } catch (viteErr: any) {
+                console.warn('[Server] Safe Fallback: Vite middleware failed to load. Serving static /dist files instead. Error:', viteErr);
+                serveStaticFilesHelper();
+            }
         } else {
+            serveStaticFilesHelper();
+        }
+
+        function serveStaticFilesHelper() {
             console.log('[Server] Production mode: Serving static files.');
             const distPath = path.join(process.cwd(), 'dist');
             app.use(express.static(distPath));

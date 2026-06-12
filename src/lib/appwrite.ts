@@ -24,7 +24,7 @@ if (typeof window !== 'undefined') {
     };
 }
 
-const getEndpoint = () => {
+export const getEndpoint = () => {
     const envEndpoint = import.meta.env.VITE_APPWRITE_ENDPOINT || import.meta.env.VITE_APPWRITE_EN || 'https://sgp.cloud.appwrite.io/v1';
     // Self-healing proxy: if browser is running over HTTPS but Appwrite endpoint is cleartext HTTP,
     // route requests via our Express proxy `/appwrite-api` to bypass browser mixed-content blocks.
@@ -37,7 +37,7 @@ const getEndpoint = () => {
     return envEndpoint;
 };
 
-const getProjectId = () => {
+export const getProjectId = () => {
     let projectId = (import.meta.env.VITE_APPWRITE_PROJECT_ID || import.meta.env.VITE_APPWRITE_PR || '69d5b8c6001a776e6ebe').trim();
     if (projectId.includes('6a215a4b')) {
         console.log('[Self-Heal Client] Detected custom project ID reference. Mapping to working ID: 6a215a4b0014ba00db87');
