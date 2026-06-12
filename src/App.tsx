@@ -88,7 +88,7 @@ const App: React.FC = () => {
     setPendingDeduction(prev => Math.max(0, prev - price));
   }, []);
 
-  const fetchUserData = useCallback(async (user: User, skipROI: boolean = false) => {
+  const fetchUserData = useCallback(async (user: User, skipROI: boolean = true) => {
     try {
       const api = isLive ? appwriteService : mockApi.db;
       const authApi = isLive ? appwriteService : mockApi.auth;
@@ -212,9 +212,10 @@ const App: React.FC = () => {
     // Run once on mount/login
     appwriteService.distributeROI(lookupId).catch(() => {});
 
+    // Polling is kept at 10 minutes to protect the server and database from excessive load, Since the global backend worker also automatically runs every 10 minutes.
     const roiTimer = setInterval(() => {
       appwriteService.distributeROI(lookupId).catch(() => {});
-    }, 60000); // Check every 60 seconds
+    }, 600000); 
 
     return () => clearInterval(roiTimer);
   }, [isLive, currentUser?.id, currentUser?.user_id]);
@@ -241,12 +242,14 @@ const App: React.FC = () => {
         setLoading(false);
         return;
       }
-      fetchUserData(currentUser);
+      fetchUserData(currentUser, true);
     };
     init();
+    // Appwrite realtime WebSockets are active for wallet/purchase changes, so database changes are pushed instantly in real-time.
+    // The background polling interval is set to 5 minutes (300,000 ms) instead of 30 seconds to massively decrease server load.
     const interval = setInterval(() => {
-      if (currentUser && !isLoggingOut) fetchUserData(currentUser);
-    }, 30000);
+      if (currentUser && !isLoggingOut) fetchUserData(currentUser, true);
+    }, 300000);
     return () => clearInterval(interval);
   }, [currentUser?.id, isLoggingOut, fetchUserData]);
 

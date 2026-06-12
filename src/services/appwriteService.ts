@@ -22,6 +22,11 @@ export const appwriteService = {
         APPWRITE_CONFIG.collections.users,
         [Query.equal('email', [authUserEmail])]
       );
+      if (!response || !response.documents || !Array.isArray(response.documents)) {
+        console.error("[getCurrentUser] Invalid documents response:", response);
+        const rawResponseStr = typeof response === 'object' ? JSON.stringify(response) : String(response);
+        throw new Error(`Profile query failed. The Appwrite API returned an unexpected response structure instead of a document list: ${rawResponseStr.slice(0, 150)}... Please verify your Appwrite configuration.`);
+      }
       if (response.documents.length === 0) {
         throw new Error(`Profile document not found! Account '${authUserEmail}' exists in Appwrite Auth, but no matching document was found in database '${APPWRITE_CONFIG.databaseId}' under collection '${APPWRITE_CONFIG.collections.users}'. Please check if your registration was successful or if there is a database ID mismatch between frontend and backend.`);
       }
@@ -124,7 +129,7 @@ export const appwriteService = {
         APPWRITE_CONFIG.collections.wallets,
         [Query.equal('user_id', [userId])]
       );
-      if (response.documents.length === 0) return null;
+      if (!response || !response.documents || !Array.isArray(response.documents) || response.documents.length === 0) return null;
       const doc = response.documents[0];
       
       const lastRoiAt = (doc as any).last_roi_at;
@@ -174,6 +179,9 @@ export const appwriteService = {
         APPWRITE_CONFIG.databaseId,
         APPWRITE_CONFIG.collections.packages
       );
+      if (!response || !response.documents || !Array.isArray(response.documents)) {
+         return [];
+      }
       return response.documents.map((doc: any) => {
         let levelIncome = doc.level_income_percents;
         if (typeof levelIncome === 'string') {
@@ -202,6 +210,9 @@ export const appwriteService = {
         APPWRITE_CONFIG.databaseId,
         APPWRITE_CONFIG.collections.packages
       );
+      if (!response || !response.documents || !Array.isArray(response.documents)) {
+         return [];
+      }
       return response.documents.map((doc: any) => {
         let levelIncome = doc.level_income_percents;
         if (typeof levelIncome === 'string') {
@@ -284,7 +295,7 @@ export const appwriteService = {
         [Query.orderAsc('created_at'), Query.limit(5000)]
       );
 
-      const queue = response.documents;
+      const queue = response?.documents || [];
       // Use user_id and completed (consistent with server)
       const myEntry = queue.find((e: any) => e.user_id === userId && !e.completed);
       
@@ -433,6 +444,9 @@ export const appwriteService = {
           Query.limit(5000)
         ]
       );
+      if (!response || !response.documents || !Array.isArray(response.documents)) {
+        return [];
+      }
       return response.documents.map((doc: any) => ({ ...doc, id: doc.$id })) as unknown as Transaction[];
     } catch (error) {
       return [];
@@ -445,6 +459,9 @@ export const appwriteService = {
         APPWRITE_CONFIG.collections.users,
         [Query.equal('referred_by', [userId])]
       );
+      if (!response || !response.documents || !Array.isArray(response.documents)) {
+        return [];
+      }
       return response.documents.map((doc: any) => ({ ...doc, id: doc.$id })) as unknown as User[];
     } catch (error) {
       return [];
@@ -545,7 +562,7 @@ export const appwriteService = {
         APPWRITE_CONFIG.collections.users,
         [Query.equal('referred_by', [userId])]
       );
-      return response.documents;
+      return response?.documents || [];
     } catch (error) {
       return [];
     }
@@ -588,7 +605,7 @@ export const appwriteService = {
             APPWRITE_CONFIG.collections.settings,
             [Query.limit(1)]
           );
-          if (response.documents.length === 0) return null;
+          if (!response || !response.documents || !Array.isArray(response.documents) || response.documents.length === 0) return null;
           settingsDoc = response.documents[0];
         }
       }
@@ -700,6 +717,9 @@ export const appwriteService = {
         APPWRITE_CONFIG.collections.exchanger_requests,
         [Query.equal('user_id', [userId]), Query.orderDesc('created_at')]
       );
+      if (!response || !response.documents || !Array.isArray(response.documents)) {
+        return [];
+      }
       return response.documents.map((doc: any) => ({ ...doc, id: doc.$id })) as unknown as ExchangerRequest[];
     } catch (error) {
       return [];
@@ -766,6 +786,9 @@ export const appwriteService = {
         APPWRITE_CONFIG.collections.transactions,
         [Query.equal('user_id', [userId]), Query.equal('type', ['spin']), Query.orderDesc('created_at'), Query.limit(10)]
       );
+      if (!response || !response.documents || !Array.isArray(response.documents)) {
+        return [];
+      }
       // Map transaction objects to SpinHistory format
       return response.documents.map((doc: any) => ({
         id: doc.$id,

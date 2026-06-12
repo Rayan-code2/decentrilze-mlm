@@ -11,6 +11,23 @@ if (!process.env.VITE_APPWRITE_ENDPOINT && process.env.VITE_APPWRITE_EN) {
     console.log(`[Self-Heal] Mapping VITE_APPWRITE_EN to VITE_APPWRITE_ENDPOINT: ${process.env.VITE_APPWRITE_EN}`);
     process.env.VITE_APPWRITE_ENDPOINT = process.env.VITE_APPWRITE_EN.trim();
 }
+
+// Auto-heal IP-based Appwrite Endpoints missing the mandatory 8080 port used in your Docker container configuration
+if (process.env.VITE_APPWRITE_ENDPOINT) {
+    const rawEndpoint = process.env.VITE_APPWRITE_ENDPOINT.trim();
+    const ipPortRegex = /^https?:\/\/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?(\/.*)?$/;
+    const ipMatch = rawEndpoint.match(ipPortRegex);
+    if (ipMatch) {
+        const host = ipMatch[1];
+        const port = ipMatch[2];
+        const pathSuffix = ipMatch[3] || '/v1';
+        if (!port || port === ':80') {
+            const corrected = `http://${host}:8080${pathSuffix}`;
+            console.log(`[Self-Heal] Wow! Detected IP-based endpoint ${rawEndpoint} on port 80 (Nginx). Automatically routing to Appwrite on port 8080: ${corrected}`);
+            process.env.VITE_APPWRITE_ENDPOINT = corrected;
+        }
+    }
+}
 if (!process.env.VITE_APPWRITE_PROJECT_ID && process.env.VITE_APPWRITE_PR) {
     console.log(`[Self-Heal] Mapping VITE_APPWRITE_PR to VITE_APPWRITE_PROJECT_ID: ${process.env.VITE_APPWRITE_PR}`);
     process.env.VITE_APPWRITE_PROJECT_ID = process.env.VITE_APPWRITE_PR.trim();
@@ -3289,10 +3306,24 @@ app.post('/api/distribute-roi', verifyAuth, async (req, res) => {
             Query.equal('is_active', true)
         ]);
         
-        if (purchasesResponse.total === 0) return res.json({ success: true, message: 'No active nodes' });
+        if (!purchasesResponse || !purchasesResponse.documents || purchasesResponse.documents.length === 0) {
+            return res.json({ success: true, message: 'No active nodes' });
+        }
         
         let processedCount = 0;
         for (const p of purchasesResponse.documents as any[]) {
+            // Pre-flight check locally on the retrieved document to prevent unnecessary database reads
+            const pActivationTs = new Date(p.activated_at || p.$createdAt).getTime();
+            const pLastPaidTs = p.last_roi_at ? new Date(p.last_roi_at).getTime() : pActivationTs;
+            const pIntervalMins = Number(p.roi_interval_minutes || settings?.roi_interval_minutes || 1440);
+            const pElapsedMs = Date.now() - pLastPaidTs;
+            const pPendingCycles = Math.floor(pElapsedMs / (pIntervalMins * 60000));
+
+            if (pPendingCycles < 1) {
+                // Skip package - No ROI is pending yet, zero database load!
+                continue;
+            }
+
             const success = await processPackageROI(p, settings);
             if (success) {
                 processedCount++;
@@ -3486,6 +3517,18 @@ async function distributeGlobalROIWorker() {
                 const chunk = res.documents.slice(i, i + 5);
                 await Promise.all(chunk.map(async (p: any) => {
                     try {
+                        // Pre-flight check locally on the retrieved document to prevent unnecessary database reads
+                        const pActivationTs = new Date(p.activated_at || p.$createdAt).getTime();
+                        const pLastPaidTs = p.last_roi_at ? new Date(p.last_roi_at).getTime() : pActivationTs;
+                        const pIntervalMins = Number(p.roi_interval_minutes || settings?.roi_interval_minutes || 1440);
+                        const pElapsedMs = Date.now() - pLastPaidTs;
+                        const pPendingCycles = Math.floor(pElapsedMs / (pIntervalMins * 60000));
+
+                        if (pPendingCycles < 1) {
+                            // Skip package - No ROI is pending yet, zero database load!
+                            return;
+                        }
+
                         const price = Number(p.price || 0);
                         const dailyPerc = Number(p.daily_roi || 0);
                         const cycleAmt = (price * dailyPerc / 100);
@@ -3551,10 +3594,10 @@ async function startServer() {
         app.listen(PORT, '0.0.0.0', () => {
             console.log(`[Server] Success! Running on http://0.0.0.0:${PORT}`);
             
-            // Start the Global ROI background worker (runs every 30 seconds for higher precision)
+            // Start the Global ROI background worker (Optimized: runs every 10 minutes to significantly reduce server load)
             setInterval(() => {
                 distributeGlobalROIWorker();
-            }, 30000);
+            }, 600000);
             
             // Initial run
             distributeGlobalROIWorker();
