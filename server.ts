@@ -7,8 +7,41 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Safe resolution of __filename & __dirname for both ESM, CommonJS, PM2, and server bundles
+let myFilename = '';
+let myDirname = '';
+
+try {
+    // ESM Support
+    if (typeof import.meta !== 'undefined' && import.meta && import.meta.url) {
+        myFilename = fileURLToPath(import.meta.url);
+        myDirname = path.dirname(myFilename);
+    }
+} catch (e) {
+    // Skip
+}
+
+// CommonJS / Node fallback
+if (!myFilename) {
+    try {
+        // @ts-ignore
+        if (typeof __filename !== 'undefined') {
+            // @ts-ignore
+            myFilename = __filename;
+        }
+        // @ts-ignore
+        if (typeof __dirname !== 'undefined') {
+            // @ts-ignore
+            myDirname = __dirname;
+        }
+    } catch (e) {
+        // Skip
+    }
+}
+
+// Final fallback to process.cwd()
+const __filename = myFilename || path.join(process.cwd(), 'server.ts');
+const __dirname = myDirname || process.cwd();
 
 // Robust self-healing dotenv resolution for Linux VPS (to prevent PM2 working directory mismatch)
 const envPaths = [
