@@ -25,9 +25,10 @@ if (typeof window !== 'undefined') {
 }
 
 export const getEndpoint = () => {
-    const envEndpoint = import.meta.env.VITE_APPWRITE_ENDPOINT || import.meta.env.VITE_APPWRITE_EN || 'https://sgp.cloud.appwrite.io/v1';
-    // Self-healing proxy: if browser is running over HTTPS but Appwrite endpoint is cleartext HTTP,
-    // route requests via our Express proxy `/appwrite-api` to bypass browser mixed-content blocks.
+    const envEndpoint = (import.meta.env.VITE_APPWRITE_ENDPOINT || import.meta.env.VITE_APPWRITE_EN || 'http://72.61.244.96:8080/v1').trim();
+    
+    // Only route requests via our Express proxy `/appwrite-api` if there is a mixed-content/TLS block
+    // (browser is running over HTTPS but Appwrite endpoint is cleartext HTTP IP/domain).
     if (typeof window !== 'undefined') {
         if (window.location.protocol === 'https:' && envEndpoint.startsWith('http://')) {
             console.log("[Appwrite Connection] TLS mismatch resolved: Routing through browser HTTPS proxy.");
@@ -38,9 +39,8 @@ export const getEndpoint = () => {
 };
 
 export const getProjectId = () => {
-    let projectId = (import.meta.env.VITE_APPWRITE_PROJECT_ID || import.meta.env.VITE_APPWRITE_PR || '69d5b8c6001a776e6ebe').trim();
-    if (projectId.includes('6a215a4b')) {
-        console.log('[Self-Heal Client] Detected custom project ID reference. Mapping to working ID: 6a215a4b0014ba00db87');
+    let projectId = (import.meta.env.VITE_APPWRITE_PROJECT_ID || import.meta.env.VITE_APPWRITE_PR || '6a215a4b0014ba00db87').trim();
+    if (projectId.includes('6a215a4b') || projectId === '69d5b8c6001a776e6ebe') {
         projectId = '6a215a4b0014ba00db87';
     }
     return projectId;
@@ -60,7 +60,7 @@ export const APPWRITE_CONFIG = {
     collections: {
         users: import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID || 'users',
         packages: import.meta.env.VITE_APPWRITE_PACKAGES_COLLECTION_ID || 'packages',
-        purchases: import.meta.env.VITE_APPWRITE_USER_PACKAGES_COLLECTION_ID || import.meta.env.VITE_APPWRITE_PURCHASES_COLLECTION_ID || 'user_packages',
+        purchases: import.meta.env.VITE_APPWRITE_USER_PACKAGES_COLLECTION_ID || (import.meta.env.VITE_APPWRITE_PURCHASES_COLLECTION_ID === 'purchases' ? 'user_packages' : (import.meta.env.VITE_APPWRITE_PURCHASES_COLLECTION_ID || 'user_packages')),
         goldQueue: import.meta.env.VITE_APPWRITE_GOLD_QUEUE_COLLECTION_ID || 'gold_queue',
         wallets: import.meta.env.VITE_APPWRITE_WALLETS_COLLECTION_ID || 'wallets',
         transactions: import.meta.env.VITE_APPWRITE_TRANSACTIONS_COLLECTION_ID || 'transactions',

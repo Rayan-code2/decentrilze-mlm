@@ -138,9 +138,36 @@ const App: React.FC = () => {
         const updatedUser = { ...freshUser, global_rank: rank };
         setCurrentUser(updatedUser);
         localStorage.setItem('spiral_user', JSON.stringify(updatedUser));
+      } else if (isLive && currentUser) {
+        // Active Appwrite session expired or was deleted under the hood. Force gentle session clear.
+        console.warn("[App] Active Appwrite session is missing/expired. Clearing local session state.");
+        setCurrentUser(null);
+        localStorage.removeItem('spiral_user');
+        setWallet({ id: '', user_id: '', balance: 0, total_earned: 0, total_withdrawn: 0 });
+        setActiveTab('wallet');
       }
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.error("[fetchUserData error]:", e);
+      // If we are in live mode and we failed due to Appwrite (e.g. unauthorized / database not found / security rules),
+      // we should clear the local state so the user is forced to make a fresh registration/login.
+      if (isLive && currentUser) {
+        const errorMsg = String(e.message || e).toLowerCase();
+        if (
+          errorMsg.includes('unauthorized') || 
+          errorMsg.includes('missing') || 
+          errorMsg.includes('not found') || 
+          errorMsg.includes('database with the requested id') || 
+          errorMsg.includes('could not be found') ||
+          errorMsg.includes('permission') ||
+          errorMsg.includes('user_unauthorized')
+        ) {
+          console.warn("[App] Active Appwrite session is missing or invalid. Clearing stale local session.");
+          setCurrentUser(null);
+          localStorage.removeItem('spiral_user');
+          setWallet({ id: '', user_id: '', balance: 0, total_earned: 0, total_withdrawn: 0 });
+          setActiveTab('wallet');
+        }
+      }
     } finally {
       setLoading(false);
     }

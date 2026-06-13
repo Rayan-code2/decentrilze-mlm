@@ -482,9 +482,26 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
             <div className={`p-2 rounded-xl flex-shrink-0 ${statusMsg.type === 'success' ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
               {statusMsg.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
             </div>
-            <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed">
-              {statusMsg.message}
-            </p>
+            <div className="flex-1 flex flex-col gap-2">
+              <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed">
+                {statusMsg.message}
+              </p>
+              {(statusMsg.message.toLowerCase().includes('authentication') ||
+                statusMsg.message.toLowerCase().includes('session') ||
+                statusMsg.message.toLowerCase().includes('unauthorized') ||
+                statusMsg.message.toLowerCase().includes('expired')) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem('spiral_user');
+                    window.location.reload();
+                  }}
+                  className="mt-2 text-[10px] uppercase font-black tracking-widest px-4 py-2 bg-red-400/20 hover:bg-red-400/40 text-rose-300 rounded-xl transition duration-300 w-fit cursor-pointer border border-red-400/30"
+                >
+                  Clear Session & Re-Login
+                </button>
+              )}
+            </div>
           </motion.div>
         )}
 

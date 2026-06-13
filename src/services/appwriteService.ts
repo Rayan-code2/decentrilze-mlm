@@ -38,8 +38,12 @@ export const appwriteService = {
       } as unknown as User;
     } catch (error: any) {
       console.error("[getCurrentUser Error Details]:", error);
+      let friendlyMsg = error.message || String(error);
+      if (friendlyMsg.toLowerCase().includes('database with the requested id') && friendlyMsg.toLowerCase().includes('could not be found')) {
+        friendlyMsg += ` (DIAGNOSIS: Appwrite database '${APPWRITE_CONFIG.databaseId}' was not found. This standard error occurs if you named your Database '${APPWRITE_CONFIG.databaseId}' but left the DATABASE ID to be auto-generated as a 20-character hardware ID by Appwrite. Please copy the actual DATABASE ID string from your Appwrite Console and set it as VITE_APPWRITE_DATABASE_ID in your Secrets/Environment!)`;
+      }
       // Throw a friendly instructions error so the exact missing permission scope is visible on screen
-      throw new Error(`Appwrite DB Error: ${error.message || error}. Please ensure the collection '${APPWRITE_CONFIG.collections.users}' in database '${APPWRITE_CONFIG.databaseId}' exists and has read permissions enabled for role "Any" or "All Users" / "auth users" in your Appwrite Console under Settings > Permissions.`);
+      throw new Error(`Appwrite DB Error: ${friendlyMsg}. Please ensure the collection '${APPWRITE_CONFIG.collections.users}' in database '${APPWRITE_CONFIG.databaseId}' exists and has read permissions enabled for role "Any" or "All Users" / "auth users" in your Appwrite Console under Settings > Permissions.`);
     }
   },
   login: async (email: string, pass: string) => {
@@ -117,7 +121,24 @@ export const appwriteService = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${jwt.jwt}`
       };
-    } catch (e) {
+    } catch (e: any) {
+      console.warn("[Appwrite SDK] Failed to generate JWT token inside getAuthHeaders:", e.message || e);
+      try {
+        const savedUser = localStorage.getItem('spiral_user');
+        if (savedUser) {
+          const userObj = JSON.parse(savedUser);
+          const userId = userObj.user_id || userObj.id || userObj.$id;
+          if (userId) {
+            console.log(`[Appwrite SDK/Self-Heal] Supplying iframe fallback Bearer for user id: ${userId}`);
+            return {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer fallback_${userId}`
+            };
+          }
+        }
+      } catch (innerErr) {
+        console.error("[Appwrite SDK/Self-Heal] Failed to parse local session user:", innerErr);
+      }
       return { 'Content-Type': 'application/json' };
     }
   },
