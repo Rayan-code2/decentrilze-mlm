@@ -86,6 +86,35 @@ function hashPassword(password: string): string {
     return crypto.createHmac('sha256', JWT_SECRET).update(password).digest('hex');
 }
 
+function sanitizeUser(user: any) {
+    if (!user) return user;
+    const san = { ...user };
+    delete san.password;
+    return san;
+}
+
+function cleanErrorMessage(err: any): string {
+    if (!err) return 'An unexpected error occurred.';
+    const msg = err.message || String(err);
+    console.error('[Server Error Detail]:', err);
+    const isDbError = msg.includes('FAILED QUERY') ||
+                      msg.includes('SELECT') ||
+                      msg.includes('INSERT') ||
+                      msg.includes('UPDATE') ||
+                      msg.includes('DELETE') ||
+                      msg.includes('PARAMS:') ||
+                      msg.includes('relation') ||
+                      msg.includes('column') ||
+                      msg.includes('null value') ||
+                      msg.includes('db:') ||
+                      msg.includes('postgres') ||
+                      msg.includes('drizzle');
+    if (isDbError) {
+        return 'Server database error. Please verify database connection or check server logs.';
+    }
+    return msg;
+}
+
 function generateToken(userId: string): string {
     const expiry = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
     const data = `${userId}:${expiry}`;
@@ -228,12 +257,12 @@ app.post('/api/auth/login', async (req: any, res: any) => {
             success: true,
             token,
             user: {
-                ...user,
+                ...sanitizeUser(user),
                 id: user.uid
             }
         });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
@@ -245,7 +274,7 @@ app.post('/api/auth/reset-password', async (req: any, res: any) => {
         await db.update(users).set({ password: hash }).where(eq(users.uid, userId));
         res.json({ success: true, message: 'Password reset successful.' });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
@@ -310,11 +339,11 @@ app.post('/api/auth/register', async (req: any, res: any) => {
         res.json({
             success: true,
             message: 'User registered successfully',
-            user: createdUsers[0]
+            user: sanitizeUser(createdUsers[0])
         });
     } catch (error: any) {
         console.error("Registration error:", error);
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(error) });
     }
 });
 
@@ -354,9 +383,9 @@ app.get('/api/user/profile/:userId', verifyAuth, async (req: any, res: any) => {
             userWallet = createdWallets[0];
         }
 
-        res.json({ success: true, user: profile });
+        res.json({ success: true, user: sanitizeUser(profile) });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
