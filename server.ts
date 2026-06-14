@@ -23,7 +23,6 @@ import {
     calculateLevelBusiness
 } from './src/services/mlmLogic.ts';
 
-// Safe resolution of __filename & __dirname for both ESM, CommonJS, PM2, and server bundles
 let myFilename = '';
 let myDirname = '';
 
@@ -32,54 +31,38 @@ try {
         myFilename = fileURLToPath(import.meta.url);
         myDirname = path.dirname(myFilename);
     }
-} catch (e) {
-    // Skip
-}
+} catch (e) {}
 
 if (!myFilename) {
     try {
         // @ts-ignore
-        if (typeof __filename !== 'undefined') {
-            // @ts-ignore
-            myFilename = __filename;
-        }
+        if (typeof __filename !== 'undefined') myFilename = __filename;
         // @ts-ignore
-        if (typeof __dirname !== 'undefined') {
-            // @ts-ignore
-            myDirname = __dirname;
-        }
-    } catch (e) {
-        // Skip
-    }
+        if (typeof __dirname !== 'undefined') myDirname = __dirname;
+    } catch (e) {}
 }
 
 const __filename = myFilename || path.join(process.cwd(), 'server.ts');
 const __dirname = myDirname || process.cwd();
 
-// Robust dotenv resolution
 const envPaths = [
     path.resolve(process.cwd(), '.env'),
     path.join(__dirname, '.env'),
     path.join(__dirname, '../.env'),
     path.join(__dirname, '../../.env'),
-    path.resolve(process.cwd(), '.env.example'),
-    path.join(__dirname, '.env.example')
 ];
 
-let loadedPath = '';
 for (const envPath of envPaths) {
     try {
         if (fs.existsSync(envPath)) {
             dotenv.config({ path: envPath, override: true });
-            loadedPath = envPath;
+            console.log(`[Config] Loaded .env from: ${envPath}`);
             break;
         }
-    } catch (err) {
-        // Skip
-    }
+    } catch (err) {}
 }
 
-// --- Auth Helpers & Cryptography ---
+// --- Auth Helpers ---
 const JWT_SECRET = process.env.JWT_SECRET || 'spiralKeySecureSystem_12345';
 
 function hashPassword(password: string): string {
@@ -93,30 +76,62 @@ function sanitizeUser(user: any) {
     return san;
 }
 
+// ✅ FIX: cleanErrorMessage - ab DB errors kabhi bhi frontend pe leak nahi honge
 function cleanErrorMessage(err: any): string {
     if (!err) return 'An unexpected error occurred.';
-    const msg = err.message || String(err);
-    console.error('[Server Error Detail]:', err);
-    const isDbError = msg.includes('FAILED QUERY') ||
-                      msg.includes('SELECT') ||
-                      msg.includes('INSERT') ||
-                      msg.includes('UPDATE') ||
-                      msg.includes('DELETE') ||
-                      msg.includes('PARAMS:') ||
-                      msg.includes('relation') ||
-                      msg.includes('column') ||
-                      msg.includes('null value') ||
-                      msg.includes('db:') ||
-                      msg.includes('postgres') ||
-                      msg.includes('drizzle');
-    if (isDbError) {
-        return 'Server database error. Please verify database connection or check server logs.';
+
+    // Drizzle ORM error nested levels check karo
+    const msg = (
+        err.message ||
+        err.detail ||
+        (err.cause && err.cause.message) ||
+        String(err)
+    );
+
+    // Full error object JSON mein bhi check karo (Drizzle nested errors ke liye)
+    let fullErrStr = '';
+    try {
+        fullErrStr = JSON.stringify(err);
+    } catch (_) {
+        fullErrStr = String(err);
     }
-    return msg;
+
+    // Server logs mein pura error print karo (debug ke liye)
+    console.error('[Server Error Detail]:', err);
+
+    // DB related keywords - agar koi bhi match kare toh generic message return karo
+    const dbKeywords = [
+        'FAILED QUERY', 'SELECT', 'INSERT', 'UPDATE', 'DELETE',
+        'PARAMS:', 'relation', 'column', 'null value', 'db:',
+        'postgres', 'drizzle', 'syntax error', 'violates',
+        'duplicate key', 'foreign key', 'constraint', 'pg_',
+        'ERROR:', 'DETAIL:', 'HINT:', 'WHERE', 'FROM',
+    ];
+
+    const combinedStr = msg + fullErrStr;
+    const isDbError = dbKeywords.some(keyword => combinedStr.includes(keyword));
+
+    if (isDbError) {
+        return 'Server error occurred. Please try again or contact support.';
+    }
+
+    // Safe user-facing messages
+    const safeMessages = [
+        'Email', 'Mobile', 'already registered',
+        'not found', 'Invalid', 'Insufficient',
+        'Unauthorized', 'Forbidden', 'No free spins',
+        'Sequence Error', 'already active', 'Node already',
+        'Please activate', 'balance', 'Password',
+    ];
+
+    const isSafe = safeMessages.some(s => msg.includes(s));
+    if (isSafe) return msg;
+
+    return 'An unexpected server error occurred. Please try again.';
 }
 
 function generateToken(userId: string): string {
-    const expiry = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
+    const expiry = Date.now() + 30 * 24 * 60 * 60 * 1000;
     const data = `${userId}:${expiry}`;
     const signature = crypto.createHmac('sha256', JWT_SECRET).update(data).digest('hex');
     return `${userId}.${expiry}.${signature}`;
@@ -129,15 +144,10 @@ function verifyToken(token: string): { uid: string } | null {
         const [userId, expiryStr, signature] = parts;
         const expiry = parseInt(expiryStr, 10);
         if (Date.now() > expiry) return null;
-        
         const data = `${userId}:${expiry}`;
         const expectedSignature = crypto.createHmac('sha256', JWT_SECRET).update(data).digest('hex');
-        if (signature === expectedSignature) {
-            return { uid: userId };
-        }
-    } catch (e) {
-        // Ignore
-    }
+        if (signature === expectedSignature) return { uid: userId };
+    } catch (e) {}
     return null;
 }
 
@@ -146,13 +156,9 @@ try {
     const isVPS = fs.existsSync('/root/cryptospiral') || process.cwd().includes('cryptospiral');
     if (isVPS) {
         defaultPort = 3005;
-        console.log(`[Port Autodetect] Detected VPS environment. Defaulting port to: ${defaultPort}`);
-    } else {
-        console.log(`[Port Autodetect] Detected AI Studio environment. Defaulting port to: ${defaultPort}`);
+        console.log(`[Port] VPS detected. Port: ${defaultPort}`);
     }
-} catch (e) {
-    // Fail-safe to 3000
-}
+} catch (e) {}
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : defaultPort;
@@ -166,14 +172,12 @@ const verifyAuth = async (req: any, res: any, next: any) => {
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return res.status(401).json({ success: false, message: 'Unauthorized. No token specified.' });
         }
-        
         const token = authHeader.split(' ')[1];
         if (token.startsWith('fallback_')) {
             const userId = token.replace('fallback_', '');
             req.user = { uid: userId, email: `${userId}@spiral-fallback.com` };
             return next();
         }
-
         const decoded = verifyToken(token);
         if (decoded) {
             const userDoc = await db.select().from(users).where(eq(users.uid, decoded.uid)).limit(1);
@@ -182,14 +186,11 @@ const verifyAuth = async (req: any, res: any, next: any) => {
                 return next();
             }
         }
-
-        // Direct fallback token match
         const matchedUser = await db.select().from(users).where(eq(users.uid, token)).limit(1);
         if (matchedUser.length > 0) {
             req.user = { uid: matchedUser[0].uid, email: matchedUser[0].email, role: matchedUser[0].role };
             return next();
         }
-
         return res.status(401).json({ success: false, message: 'Unauthorized session' });
     } catch (error) {
         return res.status(401).json({ success: false, message: 'Unauthorized session' });
@@ -202,29 +203,20 @@ const verifyAdmin = async (req: any, res: any, next: any) => {
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return res.status(401).json({ success: false, message: 'Unauthorized. Admin credentials required.' });
         }
-        
         const token = authHeader.split(' ')[1];
         let userId = '';
-        
         if (token.startsWith('fallback_')) {
             userId = token.replace('fallback_', '');
         } else {
             const decoded = verifyToken(token);
-            if (decoded) {
-                userId = decoded.uid;
-            } else {
-                userId = token;
-            }
+            userId = decoded ? decoded.uid : token;
         }
-
         const userDoc = await db.select().from(users).where(eq(users.uid, userId)).limit(1);
         const isAdmin = userDoc.length > 0 && userDoc[0].role === 'admin';
-
         if (isAdmin || userId === '1') {
             req.user = { uid: userId, role: 'admin' };
             return next();
         }
-
         return res.status(403).json({ success: false, message: 'Forbidden. Admin permission required.' });
     } catch (error) {
         return res.status(401).json({ success: false, message: 'Unauthorized Admin credentials' });
@@ -233,43 +225,45 @@ const verifyAdmin = async (req: any, res: any, next: any) => {
 
 // --- ROUTES ---
 
-// Login Endpoint
+// Login
 app.post('/api/auth/login', async (req: any, res: any) => {
     const { email, pass } = req.body;
     try {
-        const cleanEmail = (email || '').trim().toLowerCase();
+        if (!email || !pass) {
+            return res.status(400).json({ success: false, message: 'Email and password are required.' });
+        }
+        const cleanEmail = email.trim().toLowerCase();
         const matches = await db.select().from(users).where(eq(users.email, cleanEmail)).limit(1);
         if (matches.length === 0) {
             return res.status(400).json({ success: false, message: 'User not found.' });
         }
-        
         const user = matches[0];
+
+        // ✅ FIX: Blocked user check
+        if (user.isBlocked) {
+            return res.status(403).json({ success: false, message: 'Your account has been blocked. Contact support.' });
+        }
+
         const inputHash = hashPassword(pass);
-        
         if (user.password && user.password !== inputHash) {
             return res.status(401).json({ success: false, message: 'Invalid email or password.' });
         } else if (!user.password && pass !== 'password123') {
-            return res.status(401).json({ success: false, message: 'Invalid email or password. Initial default is key: password123.' });
+            return res.status(401).json({ success: false, message: 'Invalid email or password.' });
         }
-        
         const token = generateToken(user.uid);
-        res.json({
-            success: true,
-            token,
-            user: {
-                ...sanitizeUser(user),
-                id: user.uid
-            }
-        });
+        res.json({ success: true, token, user: { ...sanitizeUser(user), id: user.uid } });
     } catch (err: any) {
         res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Password Reset Endpoint
+// Password Reset
 app.post('/api/auth/reset-password', async (req: any, res: any) => {
     const { userId, newPassword } = req.body;
     try {
+        if (!userId || !newPassword) {
+            return res.status(400).json({ success: false, message: 'userId and newPassword are required.' });
+        }
         const hash = hashPassword(newPassword);
         await db.update(users).set({ password: hash }).where(eq(users.uid, userId));
         res.json({ success: true, message: 'Password reset successful.' });
@@ -278,76 +272,100 @@ app.post('/api/auth/reset-password', async (req: any, res: any) => {
     }
 });
 
-// 1. Central Registration Route
+// ✅ MAIN FIX: Registration Route - pura try/catch aur validation
 app.post('/api/auth/register', async (req: any, res: any) => {
     const { email, pass, name, referredBy, mobile } = req.body;
-    const cleanEmail = (email || '').trim().toLowerCase();
-    console.log(`[Registration Request] Email: ${cleanEmail}, Sponsor: ${referredBy}`);
-    
+
+    // Input validation
+    if (!email || !pass) {
+        return res.status(400).json({ success: false, message: 'Email and password are required.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    console.log(`[Registration] Email: ${cleanEmail}, Sponsor: ${referredBy || 'none'}`);
+
     try {
+        // Email duplicate check
         const existingUsers = await db.select().from(users).where(eq(users.email, cleanEmail)).limit(1);
         if (existingUsers.length > 0) {
             return res.status(400).json({ success: false, message: `Email ${cleanEmail} is already registered.` });
         }
 
-        if (mobile) {
-            const existingMobile = await db.select().from(users).where(eq(users.mobile, mobile)).limit(1);
+        // Mobile duplicate check
+        if (mobile && mobile.trim()) {
+            const existingMobile = await db.select().from(users).where(eq(users.mobile, mobile.trim())).limit(1);
             if (existingMobile.length > 0) {
-                return res.status(400).json({ success: false, message: `Mobile number ${mobile} is already registered.` });
+                return res.status(400).json({ success: false, message: `Mobile number is already registered.` });
             }
         }
 
         const generatedUid = 'U_' + Math.random().toString(36).substring(2, 15).toUpperCase();
         const hashedPassword = hashPassword(pass);
-
-        // Map sponsor ID
-        const resolvedSponsor = referredBy ? (await resolveUserAuthId(referredBy) || '1') : '1';
-        const matrixParentId = await findGlobalMatrixParent();
         const nodeId = `NX-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
-        // Create profile inside Postgres
+        // Sponsor resolve
+        let resolvedSponsor = '1';
+        if (referredBy && referredBy.trim()) {
+            const sponsorResolved = await resolveUserAuthId(referredBy.trim());
+            if (sponsorResolved) resolvedSponsor = sponsorResolved;
+        }
+
+        // Matrix parent
+        let matrixParentId = '1';
+        try {
+            const mp = await findGlobalMatrixParent();
+            if (mp) matrixParentId = mp;
+        } catch (mpErr) {
+            console.warn('[Register] Matrix parent lookup failed, using default:', mpErr);
+        }
+
+        // Insert user
         const createdUsers = await db.insert(users).values({
             uid: generatedUid,
             email: cleanEmail,
-            name: name || '',
+            name: (name || '').trim(),
             role: 'user',
             referredBy: resolvedSponsor,
-            matrixParentId: matrixParentId || '1',
+            matrixParentId,
             nodeId,
             isActive: false,
-            mobile: mobile || '',
+            mobile: (mobile || '').trim(),
             password: hashedPassword,
             directCount: 0,
         }).returning();
 
-        // Initialize wallet
+        // Create wallet
         await db.insert(wallets).values({
             userId: generatedUid,
             balance: 0.0,
             totalEarned: 0.0,
         });
 
-        // Increment direct count of sponsor
+        // Increment sponsor's direct count
         if (resolvedSponsor && resolvedSponsor !== '0' && resolvedSponsor !== '1') {
             await db.update(users)
                 .set({ directCount: sql`${users.directCount} + 1` })
                 .where(eq(users.uid, resolvedSponsor));
-            
-            await triggerBoostingServer(resolvedSponsor);
+
+            // Trigger boosting (non-blocking)
+            triggerBoostingServer(resolvedSponsor).catch(e =>
+                console.warn('[Register] Boosting trigger failed:', e.message)
+            );
         }
 
+        console.log(`[Registration SUCCESS] User: ${generatedUid}, Email: ${cleanEmail}`);
         res.json({
             success: true,
-            message: 'User registered successfully',
+            message: 'Registration successful! Please login to continue.',
             user: sanitizeUser(createdUsers[0])
         });
     } catch (error: any) {
-        console.error("Registration error:", error);
+        console.error('[Registration Error]', error);
         res.status(500).json({ success: false, message: cleanErrorMessage(error) });
     }
 });
 
-// User Profile Lookup
+// User Profile
 app.get('/api/user/profile/:userId', verifyAuth, async (req: any, res: any) => {
     const { userId } = req.params;
     try {
@@ -355,10 +373,8 @@ app.get('/api/user/profile/:userId', verifyAuth, async (req: any, res: any) => {
         let profile = await fetchUserById(resolvedId);
 
         if (!profile) {
-            // First user fallback to auto-promote to admin
             const isFirst = (await db.select().from(users).limit(1)).length === 0;
             const defaultRole = isFirst ? 'admin' : 'user';
-
             const created = await db.insert(users).values({
                 uid: resolvedId,
                 email: req.user?.email || `${resolvedId}@spiral-system.com`,
@@ -372,7 +388,6 @@ app.get('/api/user/profile/:userId', verifyAuth, async (req: any, res: any) => {
             profile = created[0];
         }
 
-        // Guard wallet
         let userWallet = await fetchWallet(resolvedId);
         if (!userWallet) {
             const createdWallets = await db.insert(wallets).values({
@@ -389,7 +404,7 @@ app.get('/api/user/profile/:userId', verifyAuth, async (req: any, res: any) => {
     }
 });
 
-// Wallet Endpoint
+// Wallet
 app.get('/api/user/wallet/:userId', verifyAuth, async (req: any, res: any) => {
     const { userId } = req.params;
     try {
@@ -405,7 +420,7 @@ app.get('/api/user/wallet/:userId', verifyAuth, async (req: any, res: any) => {
         }
         res.json({ success: true, wallet: userWallet });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
@@ -415,56 +430,42 @@ app.post('/api/user/wallet/update', verifyAuth, async (req: any, res: any) => {
     try {
         const resolvedId = await resolveUserAuthId(userId) || userId;
         const isAdmin = req.user?.role === 'admin';
-
         if (!isAdmin && resolvedId !== req.user?.uid) {
             return res.status(403).json({ success: false, message: 'Forbidden update parameters' });
         }
-
         const updatePayload: any = {};
         if (data.balance !== undefined) updatePayload.balance = Number(data.balance);
         if (data.availableSpins !== undefined) updatePayload.availableSpins = parseInt(data.availableSpins, 10);
         if (data.dailyPackageRoi !== undefined) updatePayload.dailyPackageRoi = Number(data.dailyPackageRoi);
-
         await db.update(wallets).set(updatePayload).where(eq(wallets.userId, resolvedId));
         res.json({ success: true, message: 'Wallet updated successfully' });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Load Catalogue Packages
+// Packages
 app.get('/api/packages', async (req: any, res: any) => {
     try {
         let list = await db.select().from(mlmPackages).orderBy(asc(mlmPackages.price));
         if (list.length === 0) {
-            // Auto seed default matrix portfolio
             await db.insert(mlmPackages).values({ name: '$10 Node', price: 10.0, dailyRoi: 0.5, roiIntervalMinutes: 1440, maxRoiPercent: 200.0, durationDays: 365, isActive: true, directIncomePercent: 10.0, matrixIncomePercent: 5.0, levelIncomePercents: '[1,1,1]' });
             await db.insert(mlmPackages).values({ name: '$20 Node', price: 20.0, dailyRoi: 1.0, roiIntervalMinutes: 1440, maxRoiPercent: 200.0, durationDays: 365, isActive: true, directIncomePercent: 15.0, matrixIncomePercent: 10.0, levelIncomePercents: '[2,1,1,1]' });
             await db.insert(mlmPackages).values({ name: '$50 Node', price: 50.0, dailyRoi: 1.5, roiIntervalMinutes: 1440, maxRoiPercent: 200.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 15.0, levelIncomePercents: '[5,2,2,1,1]' });
             list = await db.select().from(mlmPackages).orderBy(asc(mlmPackages.price));
         }
-
-        // Map json percentages compatibility
         const packagesParsed = list.map(p => {
             let percents = [0,0,0,0,0,0,0,0,0,0];
-            try {
-                if (p.levelIncomePercents) {
-                    percents = JSON.parse(p.levelIncomePercents);
-                }
-            } catch (e) {}
-            return {
-                ...p,
-                level_income_percents: percents
-            };
+            try { if (p.levelIncomePercents) percents = JSON.parse(p.levelIncomePercents); } catch (e) {}
+            return { ...p, level_income_percents: percents };
         });
-
         res.json({ success: true, packages: packagesParsed });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Save Catalog Package
+// Save Package (Admin)
 app.post('/api/admin/save-package', verifyAdmin, async (req: any, res: any) => {
     const { pkg } = req.body;
     try {
@@ -480,7 +481,6 @@ app.post('/api/admin/save-package', verifyAdmin, async (req: any, res: any) => {
             levelIncomePercents: typeof pkg.level_income_percents === 'string' ? pkg.level_income_percents : JSON.stringify(pkg.level_income_percents || []),
             isActive: pkg.isActive !== undefined ? pkg.isActive : true
         };
-
         if (pkg.id) {
             await db.update(mlmPackages).set(payload).where(eq(mlmPackages.id, parseInt(pkg.id, 10)));
         } else {
@@ -488,7 +488,7 @@ app.post('/api/admin/save-package', verifyAdmin, async (req: any, res: any) => {
         }
         res.json({ success: true, message: 'Package saved successfully' });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
@@ -499,11 +499,11 @@ app.post('/api/admin/delete-package', verifyAdmin, async (req: any, res: any) =>
         await db.delete(mlmPackages).where(eq(mlmPackages.id, parseInt(packageId, 10)));
         res.json({ success: true, message: 'Package deleted successfully' });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Force Sync Boosting For User
+// Sync Boosting
 app.post('/api/user/sync-boosting', verifyAuth, async (req: any, res: any) => {
     const { userId } = req.body;
     try {
@@ -511,27 +511,21 @@ app.post('/api/user/sync-boosting', verifyAuth, async (req: any, res: any) => {
         const result = await triggerBoostingServer(resolvedId);
         res.json({ success: true, result });
     } catch (e: any) {
-        res.status(500).json({ success: false, message: e.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(e) });
     }
 });
 
-// Get Boosting Progress Info
+// Boosting Progress
 app.get('/api/user/boosting-progress/:userId', verifyAuth, async (req: any, res: any) => {
     const { userId } = req.params;
     try {
         const resolvedId = await resolveUserAuthId(userId) || userId;
         const queue = await db.select().from(goldQueue).orderBy(asc(goldQueue.createdAt));
         const activeEntries = queue.filter(e => !e.completed);
-        
         const myEntry = activeEntries.find(e => e.userId === resolvedId);
-        if (!myEntry) {
-            return res.json({ progress: 0, total: 12, position: 0 });
-        }
-
+        if (!myEntry) return res.json({ progress: 0, total: 12, position: 0 });
         const myPosition = activeEntries.findIndex(e => e.userId === resolvedId) + 1;
         const completedCount = queue.filter(e => e.completed).length;
-        
-        // Calculate progress in global pool (people entered since last completion)
         const uncompletedBeforeMe = activeEntries.findIndex(e => e.userId === resolvedId);
         let progress = 0;
         if (uncompletedBeforeMe === 0) {
@@ -540,155 +534,112 @@ app.get('/api/user/boosting-progress/:userId', verifyAuth, async (req: any, res:
             const myIndex = queue.findIndex(e => e.id === myEntry.id);
             progress = Math.max(0, queue.length - 1 - myIndex);
         }
-
-        res.json({
-            progress: Math.min(12, progress),
-            total: 12,
-            position: myPosition
-        });
+        res.json({ progress: Math.min(12, progress), total: 12, position: myPosition });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// List Admin Boosting Queue
+// Admin Boosting Queue
 app.get('/api/admin/boosting-queue', verifyAdmin, async (req: any, res: any) => {
     try {
         const queue = await db.select().from(goldQueue).orderBy(asc(goldQueue.createdAt));
         res.json({ success: true, queue });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Approve Boosting Node
+// Force Boosting Winner
 app.post('/api/admin/force-boosting-winner', verifyAdmin, async (req: any, res: any) => {
-    const { userId } = req.body;
     try {
         const settings = await getServerSettings();
         await processBoostingQueue(settings?.boosting_reward || 20.0);
         res.json({ success: true, message: 'Boosting processed successfully' });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Delete Boosting Record
+// Delete Boosting Entry
 app.post('/api/admin/delete-boosting-entry', verifyAdmin, async (req: any, res: any) => {
     const { id } = req.body;
     try {
         await db.delete(goldQueue).where(eq(goldQueue.id, parseInt(id, 10)));
         res.json({ success: true, message: 'Deleted entry' });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Central MLM Purchase Node Endpoint
+// Purchase Package
 app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
     const { userId: rawUserId, packageId } = req.body;
     try {
         const userId = await resolveUserAuthId(rawUserId) || rawUserId;
-        const [profile, wallet] = await Promise.all([
-            fetchUserById(userId),
-            fetchWallet(userId)
-        ]);
+        const [profile, wallet] = await Promise.all([fetchUserById(userId), fetchWallet(userId)]);
 
         if (!profile) return res.status(404).json({ success: false, message: 'User profile not found.' });
         if (!wallet) return res.status(404).json({ success: false, message: 'Wallet not found.' });
 
-        // Retrieve package details
         const catalogPkg = await db.select().from(mlmPackages).where(eq(mlmPackages.id, parseInt(packageId, 10))).limit(1);
-        if (catalogPkg.length === 0) {
-            return res.status(404).json({ success: false, message: 'Node not found inside catalogue.' });
-        }
-        const pkgRaw = catalogPkg[0];
-        
-        let levelPercents = [0,0,0,0,0,0,0,0,0,0];
-        try {
-            if (pkgRaw.levelIncomePercents) levelPercents = JSON.parse(pkgRaw.levelIncomePercents);
-        } catch (e) {}
+        if (catalogPkg.length === 0) return res.status(404).json({ success: false, message: 'Node not found inside catalogue.' });
 
-        const pkg = {
-            ...pkgRaw,
-            level_income_percents: levelPercents
-        };
+        const pkgRaw = catalogPkg[0];
+        let levelPercents = [0,0,0,0,0,0,0,0,0,0];
+        try { if (pkgRaw.levelIncomePercents) levelPercents = JSON.parse(pkgRaw.levelIncomePercents); } catch (e) {}
+        const pkg = { ...pkgRaw, level_income_percents: levelPercents };
 
         const price = Number(pkg.price);
         if (Number(wallet.balance) < price) {
             return res.json({ success: false, message: `Insufficient balance ($${wallet.balance})` });
         }
 
-        // Sequences checking
         const existingPurchases = await db.select().from(purchases).where(eq(purchases.userId, userId));
         const isActiveAlready = existingPurchases.some(p => p.packageId === pkg.id && p.isActive);
-        if (isActiveAlready) {
-            return res.json({ success: false, message: 'Node already active.' });
-        }
+        if (isActiveAlready) return res.json({ success: false, message: 'Node already active.' });
 
         const sortedCatalogue = await db.select().from(mlmPackages).orderBy(asc(mlmPackages.price));
         const index = sortedCatalogue.findIndex(p => p.id === pkg.id);
         if (index > 0) {
             const prevPkg = sortedCatalogue[index - 1];
             const hasPrev = existingPurchases.some(p => p.packageId === prevPkg.id);
-            if (!hasPrev) {
-                return res.json({ success: false, message: `Sequence Error: Please activate the $${prevPkg.price} Node first.` });
-            }
+            if (!hasPrev) return res.json({ success: false, message: `Sequence Error: Please activate the $${prevPkg.price} Node first.` });
         }
 
-        // Deduct balance
         const initialBalance = Number(wallet.balance);
         await db.update(wallets).set({ balance: sql`${wallets.balance} - ${price}` }).where(eq(wallets.userId, userId));
 
         let createdPurchase;
         try {
             const result = await db.insert(purchases).values({
-                userId,
-                packageId: pkg.id,
-                price: price,
-                dailyRoi: pkg.dailyRoi,
-                roiIntervalMinutes: pkg.roiIntervalMinutes,
-                maxRoiPercent: pkg.maxRoiPercent,
-                roiEarned: 0.0,
-                isActive: true
+                userId, packageId: pkg.id, price,
+                dailyRoi: pkg.dailyRoi, roiIntervalMinutes: pkg.roiIntervalMinutes,
+                maxRoiPercent: pkg.maxRoiPercent, roiEarned: 0.0, isActive: true
             }).returning();
             createdPurchase = result[0];
         } catch (insertErr) {
-            // Revert balance on insert error
             await db.update(wallets).set({ balance: initialBalance }).where(eq(wallets.userId, userId));
             throw insertErr;
         }
 
-        // Activate profile
         if (!profile.isActive) {
             await db.update(users).set({ isActive: true }).where(eq(users.uid, userId));
         }
 
-        // Calculate available spins mapping
-        let spinsEarned = Math.max(1, Math.floor(price / 10));
-        await db.update(wallets)
-            .set({ 
-                availableSpins: sql`${wallets.availableSpins} + ${spinsEarned}` 
-            })
-            .where(eq(wallets.userId, userId));
+        const spinsEarned = Math.max(1, Math.floor(price / 10));
+        await db.update(wallets).set({ availableSpins: sql`${wallets.availableSpins} + ${spinsEarned}` }).where(eq(wallets.userId, userId));
 
-        // Credit Instant Day-1 ROI immediately
         const firstYield = Number(((price * (pkg.dailyRoi || 0.5)) / 100).toFixed(4));
         if (firstYield > 0) {
             await distributeIncomeServer(userId, firstYield, 'roi', `Instant yield for ${pkg.name}`, 'SYSTEM', 0, true);
         }
 
-        // Direct Debit ledger transaction
         await db.insert(transactions).values({
-            userId,
-            amount: price,
-            type: 'debit',
-            status: 'completed',
-            description: `Activated $${price} Node (${pkg.name})`,
-            fromUserId: 'SYSTEM'
+            userId, amount: price, type: 'debit', status: 'completed',
+            description: `Activated $${price} Node (${pkg.name})`, fromUserId: 'SYSTEM'
         });
 
-        // 1. Sponsor / Direct Income
         const sponsorId = profile.referredBy || '1';
         if (sponsorId && sponsorId !== '0') {
             const directPayout = Number(((price * (pkg.directIncomePercent || 0)) / 100).toFixed(4));
@@ -697,7 +648,6 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
             }
         }
 
-        // 2. Immediate Matrix Parent Income
         const matrixParentUid = profile.matrixParentId || '1';
         if (matrixParentUid && matrixParentUid !== userId && matrixParentUid !== '0') {
             const matrixPayout = Number(((price * (pkg.matrixIncomePercent || 0)) / 100).toFixed(4));
@@ -706,38 +656,29 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
             }
         }
 
-        // 3. Level structure commissions distribution (Levels 1 - 10)
         let currLevelId = profile.referredBy || '1';
         for (let l = 1; l <= Math.min(10, levelPercents.length); l++) {
             if (!currLevelId || currLevelId === '0' || currLevelId === userId) break;
-            
             const depthAmt = Number(levelPercents[l - 1] || 0);
             if (depthAmt > 0) {
                 await distributeIncomeServer(currLevelId, depthAmt, 'level_income', `Level ${l} commission: Node $${price} from ${profile.name}`, userId, l);
             }
-
             const parentDoc = await fetchUserById(currLevelId);
             currLevelId = parentDoc?.referredBy || '1';
             if (currLevelId === '1') break;
         }
 
-        // Run boosting scanning on buyers and sponsors
         await triggerBoostingServer(userId);
         await updateBusinessVolumeServer(userId, price);
 
-        res.json({
-            success: true,
-            message: 'Node activated successfully.',
-            purchase: createdPurchase,
-            bonusSpins: spinsEarned
-        });
+        res.json({ success: true, message: 'Node activated successfully.', purchase: createdPurchase, bonusSpins: spinsEarned });
     } catch (err: any) {
-        console.error("Purchase packages failed:", err);
-        res.status(500).json({ success: false, message: err.message });
+        console.error('Purchase failed:', err);
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Load Ledger transactions
+// Transactions
 app.get('/api/user/transactions/:userId', verifyAuth, async (req: any, res: any) => {
     const { userId } = req.params;
     try {
@@ -745,11 +686,11 @@ app.get('/api/user/transactions/:userId', verifyAuth, async (req: any, res: any)
         const list = await db.select().from(transactions).where(eq(transactions.userId, resolvedId)).orderBy(desc(transactions.createdAt)).limit(100);
         res.json({ success: true, transactions: list });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Get User Direct Referral List
+// Directs
 app.get('/api/user/directs/:userId', verifyAuth, async (req: any, res: any) => {
     const { userId } = req.params;
     try {
@@ -757,64 +698,54 @@ app.get('/api/user/directs/:userId', verifyAuth, async (req: any, res: any) => {
         const list = await db.select().from(users).where(eq(users.referredBy, resolvedId)).orderBy(desc(users.createdAt));
         res.json({ success: true, directs: list });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// All Users Collection (Admin)
+// Admin Users
 app.get('/api/admin/users', verifyAdmin, async (req: any, res: any) => {
     try {
         const allUsrs = await db.select().from(users).orderBy(desc(users.createdAt));
         res.json({ success: true, users: allUsrs });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// All Purchases (Admin)
+// Admin Purchases
 app.get('/api/admin/purchases', verifyAdmin, async (req: any, res: any) => {
     try {
         const list = await db.select().from(purchases).orderBy(desc(purchases.activatedAt));
         res.json({ success: true, purchases: list });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Fetch User Team Data (verifyAuth)
+// Team Data
 app.get('/api/user/team-data/:userId', verifyAuth, async (req: any, res: any) => {
     const { userId } = req.params;
     try {
         const resolvedId = await resolveUserAuthId(userId) || userId;
-        
-        // Return 1st and 2nd level directs recursively in sponsor tree
         const directUids = await db.select().from(users).where(eq(users.referredBy, resolvedId));
         const directIds = directUids.map(u => u.uid);
-        
         let secondUids: any[] = [];
         if (directIds.length > 0) {
             secondUids = await db.select().from(users).where(sql`${users.referredBy} IN (${directIds.map(u => `'${u}'`).join(',')})`);
         }
-
         const teamUsers = [...directUids, ...secondUids];
         const teamUids = teamUsers.map(u => u.uid);
-
         let teamPurchases: any[] = [];
         if (teamUids.length > 0) {
             teamPurchases = await db.select().from(purchases).where(sql`${purchases.userId} IN (${teamUids.map(u => `'${u}'`).join(',')})`);
         }
-
-        res.json({
-            success: true,
-            users: teamUsers,
-            purchases: teamPurchases
-        });
+        res.json({ success: true, users: teamUsers, purchases: teamPurchases });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Get User Purchases Record (POST)
+// User Purchases
 app.post('/api/user/purchases', verifyAuth, async (req: any, res: any) => {
     const { userId } = req.body;
     try {
@@ -822,11 +753,11 @@ app.post('/api/user/purchases', verifyAuth, async (req: any, res: any) => {
         const list = await db.select().from(purchases).where(eq(purchases.userId, resolvedId)).orderBy(desc(purchases.activatedAt));
         res.json({ success: true, documents: list });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Business calculation depth route
+// Level Business
 app.get('/api/user/level-business/:userId/:depth', async (req: any, res: any) => {
     const { userId, depth } = req.params;
     try {
@@ -834,53 +765,43 @@ app.get('/api/user/level-business/:userId/:depth', async (req: any, res: any) =>
         const volume = await calculateLevelBusiness(resolvedId, parseInt(depth, 10));
         res.json({ success: true, business: volume });
     } catch (err: any) {
-        res.status(500).json({ success: false, business: 0, message: err.message });
+        res.status(500).json({ success: false, business: 0, message: cleanErrorMessage(err) });
     }
 });
 
-// Distribute User ROI yields manually
+// Distribute ROI
 app.post('/api/distribute-roi', verifyAuth, async (req: any, res: any) => {
     const { userId } = req.body;
     try {
         const resolvedId = await resolveUserAuthId(userId) || userId;
-        const activePurchases = await db.select()
-            .from(purchases)
-            .where(and(eq(purchases.userId, resolvedId), eq(purchases.isActive, true)));
-
-        const settings = await getServerSettings();
+        const activePurchases = await db.select().from(purchases).where(and(eq(purchases.userId, resolvedId), eq(purchases.isActive, true)));
         let yieldsCount = 0;
-
         for (const p of activePurchases) {
             const price = Number(p.price);
             const dailyPerc = Number(p.dailyRoi || 0.5);
             const cycleAmt = Number((price * dailyPerc / 100).toFixed(4));
-            
             if (cycleAmt > 0) {
-                // Deduct cap space and credit manually
-                const isCredited = await distributeIncomeServer(resolvedId, cycleAmt, 'roi', `Manual User ROI matching daily yield`, 'SYSTEM', 0, false);
-                if (isCredited) {
-                    yieldsCount++;
-                }
+                const isCredited = await distributeIncomeServer(resolvedId, cycleAmt, 'roi', `Manual User ROI`, 'SYSTEM', 0, false);
+                if (isCredited) yieldsCount++;
             }
         }
-
         res.json({ success: true, message: `Processed ${yieldsCount} active investments ROI distributions.` });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Load System Settings
+// Settings
 app.get('/api/settings', async (req: any, res: any) => {
     try {
         const systemSettings = await getServerSettings();
         res.json({ success: true, settings: systemSettings });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Save System Settings
+// Update Settings
 app.post('/api/update-settings', verifyAdmin, async (req: any, res: any) => {
     const { settings } = req.body;
     try {
@@ -913,20 +834,18 @@ app.post('/api/update-settings', verifyAdmin, async (req: any, res: any) => {
             rankRewards: typeof settings.rank_rewards === 'string' ? settings.rank_rewards : JSON.stringify(settings.rank_rewards || []),
             spinRewards: typeof settings.spin_rewards === 'string' ? settings.spin_rewards : JSON.stringify(settings.spin_rewards || []),
         };
-
         if (exist.length > 0) {
             await db.update(settingsTable).set(payload).where(eq(settingsTable.id, exist[0].id));
         } else {
             await db.insert(settingsTable).values(payload);
         }
-
         res.json({ success: true, message: 'Settings saved successfully' });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Edit user profile (Admin)
+// Admin Update User
 app.post('/api/admin/update-user', verifyAdmin, async (req: any, res: any) => {
     const { userId, data } = req.body;
     try {
@@ -937,15 +856,14 @@ app.post('/api/admin/update-user', verifyAdmin, async (req: any, res: any) => {
         if (data.personal_business !== undefined) payload.personalBusiness = Number(data.personal_business);
         if (data.team_business !== undefined) payload.teamBusiness = Number(data.team_business);
         if (data.isBlocked !== undefined) payload.isBlocked = !!data.isBlocked;
-
         await db.update(users).set(payload).where(eq(users.uid, resolvedId));
         res.json({ success: true, message: 'User updated successfully' });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Delete User Document (Admin)
+// Delete User
 app.post('/api/admin/delete-user', verifyAdmin, async (req: any, res: any) => {
     const { userId } = req.body;
     try {
@@ -953,53 +871,41 @@ app.post('/api/admin/delete-user', verifyAdmin, async (req: any, res: any) => {
         await db.delete(users).where(eq(users.uid, resolvedId));
         await db.delete(wallets).where(eq(wallets.userId, resolvedId));
         await db.delete(purchases).where(eq(purchases.userId, resolvedId));
-        res.json({ success: true, message: 'User purged successfully from relational database' });
+        res.json({ success: true, message: 'User purged successfully' });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Exchanger deposit and withdraw requests
+// Exchanger Request
 app.post('/api/exchanger/request', verifyAuth, async (req: any, res: any) => {
     const { userId, amount, type, address, network, utrNumber, inrAmount, rate } = req.body;
     try {
         const resolvedId = await resolveUserAuthId(userId) || userId;
         const fees = type === 'withdraw' ? 5.0 : 0.0;
-        
         if (type === 'withdraw') {
             const wallet = await fetchWallet(resolvedId);
             if (!wallet || Number(wallet.balance) < (Number(amount) + fees)) {
                 return res.json({ success: false, message: 'Insufficient wallet balance for withdrawal processing' });
             }
-            // Hold balance
-            await db.update(wallets)
-                .set({ 
-                    balance: sql`${wallets.balance} - ${(Number(amount) + fees)}`,
-                    holdBalance: sql`${wallets.holdBalance} + ${Number(amount)}`
-                })
-                .where(eq(wallets.userId, resolvedId));
+            await db.update(wallets).set({
+                balance: sql`${wallets.balance} - ${(Number(amount) + fees)}`,
+                holdBalance: sql`${wallets.holdBalance} + ${Number(amount)}`
+            }).where(eq(wallets.userId, resolvedId));
         }
-
         await db.insert(exchangerRequests).values({
-            userId: resolvedId,
-            amount: Number(amount),
-            type,
-            status: 'pending',
-            address: address || '',
-            network: network || '',
-            utrNumber: utrNumber || '',
+            userId: resolvedId, amount: Number(amount), type, status: 'pending',
+            address: address || '', network: network || '', utrNumber: utrNumber || '',
             inrAmount: inrAmount ? Number(inrAmount) : null,
-            rate: rate ? Number(rate) : null,
-            fee: fees,
+            rate: rate ? Number(rate) : null, fee: fees,
         });
-
         res.json({ success: true, message: 'Exchanger request queued successfully.' });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Exchanger list for specific User
+// User Exchanger Requests
 app.get('/api/user/exchanger-requests/:userId', verifyAuth, async (req: any, res: any) => {
     const { userId } = req.params;
     try {
@@ -1007,32 +913,28 @@ app.get('/api/user/exchanger-requests/:userId', verifyAuth, async (req: any, res
         const list = await db.select().from(exchangerRequests).where(eq(exchangerRequests.userId, resolvedId)).orderBy(desc(exchangerRequests.createdAt));
         res.json({ success: true, requests: list });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Exchanger list globally (Admin)
+// Admin Requests
 app.get('/api/admin/requests', verifyAdmin, async (req: any, res: any) => {
     try {
         const requests = await db.select().from(exchangerRequests).orderBy(desc(exchangerRequests.createdAt));
         res.json({ success: true, requests });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Handle (Approve / Reject) Deposit or Withdraw Request (Admin)
+// Handle Request (Admin)
 app.post('/api/admin/handle-request', verifyAdmin, async (req: any, res: any) => {
     const { requestId, status } = req.body;
     try {
         const reqs = await db.select().from(exchangerRequests).where(eq(exchangerRequests.id, parseInt(requestId, 10))).limit(1);
-        if (reqs.length === 0) {
-            return res.status(404).json({ success: false, message: 'Request not found.' });
-        }
+        if (reqs.length === 0) return res.status(404).json({ success: false, message: 'Request not found.' });
         const document = reqs[0];
-        if (document.status !== 'pending') {
-            return res.json({ success: false, message: 'Request already processed.' });
-        }
+        if (document.status !== 'pending') return res.json({ success: false, message: 'Request already processed.' });
 
         const userId = document.userId;
         const amt = Number(document.amount);
@@ -1041,54 +943,28 @@ app.post('/api/admin/handle-request', verifyAdmin, async (req: any, res: any) =>
         if (status === 'approved') {
             await db.update(exchangerRequests).set({ status: 'approved' }).where(eq(exchangerRequests.id, document.id));
             if (document.type === 'deposit') {
-                // Top up balance
-                await db.update(wallets)
-                    .set({ balance: sql`${wallets.balance} + ${amt}` })
-                    .where(eq(wallets.userId, userId));
-                
-                await db.insert(transactions).values({
-                    userId,
-                    amount: amt,
-                    type: 'topup',
-                    status: 'completed',
-                    description: `USDT Deposit Approved: $${amt}`,
-                    fromUserId: 'SYSTEM'
-                });
+                await db.update(wallets).set({ balance: sql`${wallets.balance} + ${amt}` }).where(eq(wallets.userId, userId));
+                await db.insert(transactions).values({ userId, amount: amt, type: 'topup', status: 'completed', description: `USDT Deposit Approved: $${amt}`, fromUserId: 'SYSTEM' });
             } else {
-                // Withdraw complete, deduct hold balance
-                await db.update(wallets)
-                    .set({ holdBalance: sql`${wallets.holdBalance} - ${amt}` })
-                    .where(eq(wallets.userId, userId));
-                
-                await db.insert(transactions).values({
-                    userId,
-                    amount: amt,
-                    type: 'withdraw',
-                    status: 'completed',
-                    description: `USDT Withdrawal Dispatched: $${amt}`,
-                    fromUserId: 'SYSTEM'
-                });
+                await db.update(wallets).set({ holdBalance: sql`${wallets.holdBalance} - ${amt}` }).where(eq(wallets.userId, userId));
+                await db.insert(transactions).values({ userId, amount: amt, type: 'withdraw', status: 'completed', description: `USDT Withdrawal Dispatched: $${amt}`, fromUserId: 'SYSTEM' });
             }
         } else {
             await db.update(exchangerRequests).set({ status: 'rejected' }).where(eq(exchangerRequests.id, document.id));
             if (document.type === 'withdraw') {
-                // Refund money hold
-                await db.update(wallets)
-                    .set({ 
-                        balance: sql`${wallets.balance} + ${(amt + fee)}`,
-                        holdBalance: sql`${wallets.holdBalance} - ${amt}`
-                    })
-                    .where(eq(wallets.userId, userId));
+                await db.update(wallets).set({
+                    balance: sql`${wallets.balance} + ${(amt + fee)}`,
+                    holdBalance: sql`${wallets.holdBalance} - ${amt}`
+                }).where(eq(wallets.userId, userId));
             }
         }
-
         res.json({ success: true, message: 'Request status updated successfully' });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Swap funds (Swap holds or transfer coins)
+// Swap
 app.post('/api/swap', verifyAuth, async (req: any, res: any) => {
     const { userId, amount } = req.body;
     try {
@@ -1097,50 +973,33 @@ app.post('/api/swap', verifyAuth, async (req: any, res: any) => {
         if (!wallet || Number(wallet.balance) < Number(amount)) {
             return res.json({ success: false, message: 'Insufficient balance to swap' });
         }
-
-        await db.update(wallets)
-            .set({ 
-                balance: sql`${wallets.balance} - ${Number(amount)}`,
-                holdBalance: sql`${wallets.holdBalance} + ${Number(amount)}`
-            })
-            .where(eq(wallets.userId, resolvedId));
-
-        await db.insert(transactions).values({
-            userId: resolvedId,
-            amount: Number(amount),
-            type: 'transfer',
-            status: 'completed',
-            description: `Swapped $${amount} to hold balance`,
-            fromUserId: 'SYSTEM'
-        });
-
+        await db.update(wallets).set({
+            balance: sql`${wallets.balance} - ${Number(amount)}`,
+            holdBalance: sql`${wallets.holdBalance} + ${Number(amount)}`
+        }).where(eq(wallets.userId, resolvedId));
+        await db.insert(transactions).values({ userId: resolvedId, amount: Number(amount), type: 'transfer', status: 'completed', description: `Swapped $${amount} to hold balance`, fromUserId: 'SYSTEM' });
         res.json({ success: true, message: 'Swap completed successfully' });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Rank Reward Claim Route
+// Rank Reward Claim
 app.post('/api/rewards/claim', verifyAuth, async (req: any, res: any) => {
     const { userId, rewardId } = req.body;
     try {
         const resolvedId = await resolveUserAuthId(userId) || userId;
         const currentSettings = await getServerSettings();
         const activeRankReward = currentSettings.rank_rewards.find((r: any) => r.id === rewardId);
-
-        if (!activeRankReward) {
-            return res.status(404).json({ success: false, message: 'Milestone target not found.' });
-        }
-
-        // Credit rank reward
+        if (!activeRankReward) return res.status(404).json({ success: false, message: 'Milestone target not found.' });
         await distributeIncomeServer(resolvedId, Number(activeRankReward.reward_amount), 'rank_reward', `${activeRankReward.rank_name} Milestone Claim`, 'SYSTEM');
         res.json({ success: true, message: 'Rank reward claimed successfully!' });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Interactive Spin Wheel
+// Spin Wheel
 app.post('/api/perform-spin', verifyAuth, async (req: any, res: any) => {
     const { userId, spinType } = req.body;
     try {
@@ -1149,13 +1008,9 @@ app.post('/api/perform-spin', verifyAuth, async (req: any, res: any) => {
         if (!wallet) return res.status(404).json({ success: false, message: 'Wallet not found' });
 
         const isFree = spinType === 'free';
-        if (isFree && Number(wallet.availableSpins || 0) < 1) {
-            return res.json({ success: false, message: 'No free spins available' });
-        } else if (!isFree && Number(wallet.balance) < 1.0) {
-            return res.json({ success: false, message: 'Insufficient balance to purchase spin ($1)' });
-        }
+        if (isFree && Number(wallet.availableSpins || 0) < 1) return res.json({ success: false, message: 'No free spins available' });
+        else if (!isFree && Number(wallet.balance) < 1.0) return res.json({ success: false, message: 'Insufficient balance to purchase spin ($1)' });
 
-        // Deduct cost
         if (isFree) {
             await db.update(wallets).set({ availableSpins: sql`${wallets.availableSpins} - 1` }).where(eq(wallets.userId, resolvedId));
         } else {
@@ -1164,55 +1019,32 @@ app.post('/api/perform-spin', verifyAuth, async (req: any, res: any) => {
 
         const currentSettings = await getServerSettings();
         const spinRewards = currentSettings.spin_rewards || [];
-        
-        // Dynamic probability selection
         let totalProb = spinRewards.reduce((sum: number, r: any) => sum + Number(r.probability || 0), 0);
         if (totalProb <= 0) totalProb = 100;
-
         let roll = Math.random() * totalProb;
         let selectedReward = spinRewards[0] || { id: '2', label: 'ZERO', amount: 0 };
-
         let sumWeight = 0;
         for (const r of spinRewards) {
             sumWeight += Number(r.probability || 0);
-            if (roll <= sumWeight) {
-                selectedReward = r;
-                break;
-            }
+            if (roll <= sumWeight) { selectedReward = r; break; }
         }
 
         const amt = Number(selectedReward.amount || 0);
         if (amt > 0) {
-            await db.update(wallets)
-                .set({ 
-                    balance: sql`${wallets.balance} + ${amt}`,
-                    totalEarned: sql`${wallets.totalEarned} + ${amt}`
-                })
-                .where(eq(wallets.userId, resolvedId));
+            await db.update(wallets).set({
+                balance: sql`${wallets.balance} + ${amt}`,
+                totalEarned: sql`${wallets.totalEarned} + ${amt}`
+            }).where(eq(wallets.userId, resolvedId));
         }
 
-        // Log transaction
-        await db.insert(transactions).values({
-            userId: resolvedId,
-            amount: amt,
-            type: 'spin',
-            status: 'completed',
-            description: `Spin wheel win: ${selectedReward.label} ($${amt})`,
-            fromUserId: 'SYSTEM'
-        });
-
-        res.json({
-            success: true,
-            reward: selectedReward,
-            newBalance: Number(wallet.balance) + amt,
-            newSpins: isFree ? Number(wallet.availableSpins) - 1 : Number(wallet.availableSpins)
-        });
+        await db.insert(transactions).values({ userId: resolvedId, amount: amt, type: 'spin', status: 'completed', description: `Spin wheel win: ${selectedReward.label} ($${amt})`, fromUserId: 'SYSTEM' });
+        res.json({ success: true, reward: selectedReward, newBalance: Number(wallet.balance) + amt, newSpins: isFree ? Number(wallet.availableSpins) - 1 : Number(wallet.availableSpins) });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Spin history wheel listing
+// Spin History
 app.get('/api/user/spin-history/:userId', verifyAuth, async (req: any, res: any) => {
     const { userId } = req.params;
     try {
@@ -1220,25 +1052,23 @@ app.get('/api/user/spin-history/:userId', verifyAuth, async (req: any, res: any)
         const list = await db.select().from(transactions).where(and(eq(transactions.userId, resolvedId), eq(transactions.type, 'spin'))).orderBy(desc(transactions.createdAt)).limit(100);
         res.json({ success: true, history: list });
     } catch (err: any) {
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 
-// Custom self heal schema trigger
+// Self Heal Schema
 app.post('/api/admin/self-heal-schema', verifyAdmin, async (req: any, res: any) => {
     try {
-        console.log("[Healing Database Parameters]");
-        res.json({ success: true, message: 'Cloud SQL database verified' });
+        await verifyAndHealPostgresSchema();
+        res.json({ success: true, message: 'Cloud SQL database verified and healed' });
     } catch (e: any) {
-        res.status(500).json({ success: false, message: e.message });
+        res.status(500).json({ success: false, message: cleanErrorMessage(e) });
     }
 });
 
-// --- CRONS / Yield Background Scanners ---
-
+// --- CRON / Background ROI ---
 let isROIBatchProcessing = false;
 
-// Process ROI catch-ups for users sequentially
 async function processPackageROI(p: any, settings: any): Promise<boolean> {
     try {
         const freshList = await db.select().from(purchases).where(eq(purchases.id, p.id)).limit(1);
@@ -1248,8 +1078,7 @@ async function processPackageROI(p: any, settings: any): Promise<boolean> {
         const price = Number(freshPkg.price);
         const dailyPerc = Number(freshPkg.dailyRoi || 0.5);
         const maxRoiPercent = Number(freshPkg.maxRoiPercent || settings?.max_roi_percent || 200);
-
-        let intervalMins = Number(freshPkg.roiIntervalMinutes || settings?.roi_interval_minutes || 1440);
+        const intervalMins = Number(freshPkg.roiIntervalMinutes || settings?.roi_interval_minutes || 1440);
         const cyclePayout = Number((price * dailyPerc / 100).toFixed(4));
         if (cyclePayout <= 0 || price <= 0) return false;
 
@@ -1261,11 +1090,8 @@ async function processPackageROI(p: any, settings: any): Promise<boolean> {
             return false;
         }
 
-        const activationTs = freshPkg.activatedAt!.getTime();
-        // Fallback checks
         const lastPaidTs = freshPkg.activatedAt!.getTime();
         const nowTs = Date.now();
-
         const elapsedMs = nowTs - lastPaidTs;
         const pendingCycles = Math.floor(elapsedMs / (intervalMins * 60000));
         if (pendingCycles < 1) return false;
@@ -1284,26 +1110,18 @@ async function processPackageROI(p: any, settings: any): Promise<boolean> {
             }
 
             const payoutAmt = Math.min(cyclePayout, remainingCap);
-            const cycleNum = i;
-
-            const success = await distributeIncomeServer(freshPkg.userId, payoutAmt, 'roi', `Node yield (Cycle #${cycleNum})`, 'SYSTEM', 0, true);
+            const success = await distributeIncomeServer(freshPkg.userId, payoutAmt, 'roi', `Node yield (Cycle #${i})`, 'SYSTEM', 0, true);
             if (success) {
                 processedAny = true;
                 currentEarned = Number((currentEarned + payoutAmt).toFixed(4));
                 pointerTs = currentCycleTargetTs;
-
                 const isFinished = maxEarningCap > 0 && currentEarned >= (maxEarningCap - 0.0001);
-                await db.update(purchases).set({
-                    roiEarned: Number(currentEarned.toFixed(4)),
-                    isActive: !isFinished
-                }).where(eq(purchases.id, freshPkg.id));
-
+                await db.update(purchases).set({ roiEarned: Number(currentEarned.toFixed(4)), isActive: !isFinished }).where(eq(purchases.id, freshPkg.id));
                 if (isFinished) break;
             } else {
                 break;
             }
         }
-
         return processedAny;
     } catch (error: any) {
         console.error(`[ROI Loop Fatal] Package: ${p.id}`, error.message);
@@ -1314,73 +1132,32 @@ async function processPackageROI(p: any, settings: any): Promise<boolean> {
 async function distributeGlobalROIWorker() {
     if (isROIBatchProcessing) return;
     isROIBatchProcessing = true;
-    
     try {
         const settings = await getServerSettings();
         const activePackages = await db.select().from(purchases).where(eq(purchases.isActive, true));
         console.log(`[Background Scanner] Checking ROI for ${activePackages.length} active nodes.`);
-
         for (const p of activePackages) {
             await processPackageROI(p, settings);
         }
     } catch (error: any) {
-        console.error("[distributeGlobalROIWorker Error]", error.message);
+        console.error('[distributeGlobalROIWorker Error]', error.message);
     } finally {
         isROIBatchProcessing = false;
     }
 }
 
-// Global Postgres schema self-healer running on server startup
+// Schema Self-Healer
 async function verifyAndHealPostgresSchema() {
-    console.log('[Schema Healer] Starting PostgreSQL schema auto-detection and self-healing...');
+    console.log('[Schema Healer] Starting...');
     const queries = [
-        // 1. Create tables if they do not exist
-        `CREATE TABLE IF NOT EXISTS "users" (
-            "id" serial PRIMARY KEY,
-            "uid" text NOT NULL UNIQUE,
-            "email" text NOT NULL
-        );`,
-        `CREATE TABLE IF NOT EXISTS "wallets" (
-            "id" serial PRIMARY KEY,
-            "user_id" text NOT NULL UNIQUE,
-            "balance" double precision NOT NULL DEFAULT 0.0
-        );`,
-        `CREATE TABLE IF NOT EXISTS "packages" (
-            "id" serial PRIMARY KEY,
-            "name" text NOT NULL,
-            "price" double precision NOT NULL,
-            "daily_roi" double precision NOT NULL
-        );`,
-        `CREATE TABLE IF NOT EXISTS "purchases" (
-            "id" serial PRIMARY KEY,
-            "user_id" text NOT NULL,
-            "package_id" integer NOT NULL,
-            "price" double precision NOT NULL
-        );`,
-        `CREATE TABLE IF NOT EXISTS "transactions" (
-            "id" serial PRIMARY KEY,
-            "user_id" text NOT NULL,
-            "amount" double precision NOT NULL,
-            "type" text NOT NULL
-        );`,
-        `CREATE TABLE IF NOT EXISTS "exchanger_requests" (
-            "id" serial PRIMARY KEY,
-            "user_id" text NOT NULL,
-            "amount" double precision NOT NULL,
-            "type" text NOT NULL
-        );`,
-        `CREATE TABLE IF NOT EXISTS "gold_queue" (
-            "id" serial PRIMARY KEY,
-            "user_id" text NOT NULL,
-            "completed" boolean NOT NULL DEFAULT false
-        );`,
-        `CREATE TABLE IF NOT EXISTS "settings" (
-            "id" serial PRIMARY KEY,
-            "telegram_link" text
-        );`,
-
-        // 2. Add columns if they do not exist
-        // users Table Columns
+        `CREATE TABLE IF NOT EXISTS "users" ("id" serial PRIMARY KEY, "uid" text NOT NULL UNIQUE, "email" text NOT NULL);`,
+        `CREATE TABLE IF NOT EXISTS "wallets" ("id" serial PRIMARY KEY, "user_id" text NOT NULL UNIQUE, "balance" double precision NOT NULL DEFAULT 0.0);`,
+        `CREATE TABLE IF NOT EXISTS "packages" ("id" serial PRIMARY KEY, "name" text NOT NULL, "price" double precision NOT NULL, "daily_roi" double precision NOT NULL);`,
+        `CREATE TABLE IF NOT EXISTS "purchases" ("id" serial PRIMARY KEY, "user_id" text NOT NULL, "package_id" integer NOT NULL, "price" double precision NOT NULL);`,
+        `CREATE TABLE IF NOT EXISTS "transactions" ("id" serial PRIMARY KEY, "user_id" text NOT NULL, "amount" double precision NOT NULL, "type" text NOT NULL);`,
+        `CREATE TABLE IF NOT EXISTS "exchanger_requests" ("id" serial PRIMARY KEY, "user_id" text NOT NULL, "amount" double precision NOT NULL, "type" text NOT NULL);`,
+        `CREATE TABLE IF NOT EXISTS "gold_queue" ("id" serial PRIMARY KEY, "user_id" text NOT NULL, "completed" boolean NOT NULL DEFAULT false);`,
+        `CREATE TABLE IF NOT EXISTS "settings" ("id" serial PRIMARY KEY, "telegram_link" text);`,
         `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "name" text NOT NULL DEFAULT '';`,
         `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "role" text NOT NULL DEFAULT 'user';`,
         `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "is_active" boolean NOT NULL DEFAULT false;`,
@@ -1396,8 +1173,6 @@ async function verifyAndHealPostgresSchema() {
         `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "mobile" text;`,
         `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "password" text;`,
         `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();`,
-
-        // wallets Table Columns
         `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "total_earned" double precision NOT NULL DEFAULT 0.0;`,
         `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "total_withdrawn" double precision NOT NULL DEFAULT 0.0;`,
         `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "last_roi_at" timestamp;`,
@@ -1407,14 +1182,8 @@ async function verifyAndHealPostgresSchema() {
         `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "level_income" double precision NOT NULL DEFAULT 0.0;`,
         `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "matrix_income" double precision NOT NULL DEFAULT 0.0;`,
         `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "hold_balance" double precision NOT NULL DEFAULT 0.0;`,
-        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "total_roi_rate" double precision DEFAULT 0.0;`,
-        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "package_roi_rate" double precision DEFAULT 0.0;`,
-        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "base_roi_rate" double precision DEFAULT 0.0;`,
-        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "daily_package_roi" double precision DEFAULT 0.0;`,
         `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "available_spins" integer NOT NULL DEFAULT 0;`,
         `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();`,
-
-        // packages Table Columns
         `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "roi_interval_minutes" integer;`,
         `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "duration_days" integer NOT NULL DEFAULT 365;`,
         `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "max_roi_percent" double precision;`,
@@ -1423,23 +1192,17 @@ async function verifyAndHealPostgresSchema() {
         `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "level_income_percents" text NOT NULL DEFAULT '[]';`,
         `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "is_active" boolean NOT NULL DEFAULT true;`,
         `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();`,
-
-        // purchases Table Columns
         `ALTER TABLE "purchases" ADD COLUMN IF NOT EXISTS "daily_roi" double precision;`,
         `ALTER TABLE "purchases" ADD COLUMN IF NOT EXISTS "roi_interval_minutes" integer;`,
         `ALTER TABLE "purchases" ADD COLUMN IF NOT EXISTS "max_roi_percent" double precision;`,
         `ALTER TABLE "purchases" ADD COLUMN IF NOT EXISTS "roi_earned" double precision NOT NULL DEFAULT 0.0;`,
         `ALTER TABLE "purchases" ADD COLUMN IF NOT EXISTS "is_active" boolean NOT NULL DEFAULT true;`,
         `ALTER TABLE "purchases" ADD COLUMN IF NOT EXISTS "activated_at" timestamp DEFAULT now();`,
-
-        // transactions Table Columns
         `ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "status" text NOT NULL DEFAULT 'completed';`,
         `ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "description" text;`,
         `ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "from_user_id" text;`,
         `ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "income_level" integer;`,
         `ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();`,
-
-        // exchanger_requests Table Columns
         `ALTER TABLE "exchanger_requests" ADD COLUMN IF NOT EXISTS "status" text NOT NULL DEFAULT 'pending';`,
         `ALTER TABLE "exchanger_requests" ADD COLUMN IF NOT EXISTS "inr_amount" double precision;`,
         `ALTER TABLE "exchanger_requests" ADD COLUMN IF NOT EXISTS "rate" double precision;`,
@@ -1448,13 +1211,9 @@ async function verifyAndHealPostgresSchema() {
         `ALTER TABLE "exchanger_requests" ADD COLUMN IF NOT EXISTS "network" text;`,
         `ALTER TABLE "exchanger_requests" ADD COLUMN IF NOT EXISTS "fee" double precision;`,
         `ALTER TABLE "exchanger_requests" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();`,
-
-        // gold_queue Table Columns
         `ALTER TABLE "gold_queue" ADD COLUMN IF NOT EXISTS "is_rebirth" boolean NOT NULL DEFAULT false;`,
         `ALTER TABLE "gold_queue" ADD COLUMN IF NOT EXISTS "payout_at" timestamp;`,
         `ALTER TABLE "gold_queue" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();`,
-
-        // settings Table Columns
         `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "marquee_text" text;`,
         `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "hall_of_fame_marquee" text;`,
         `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "admin_address_trc20" text;`,
@@ -1480,48 +1239,43 @@ async function verifyAndHealPostgresSchema() {
         `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "roi_interval_minutes" integer;`,
         `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "rank_rewards_json" text DEFAULT '[]';`,
         `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "spin_rewards_json" text DEFAULT '[]';`,
-        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();`
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();`,
     ];
 
     for (const statement of queries) {
         try {
             await db.execute(sql.raw(statement));
         } catch (err: any) {
-            console.warn(`[Schema Healer Check] Notes: ${err.message}`);
+            console.warn(`[Schema Healer] Note: ${err.message}`);
         }
     }
-    console.log('[Schema Healer] All schema corrections and validations fully applied successfully!');
+    console.log('[Schema Healer] Done!');
 }
 
-// Vite and Static configurations
+// Start Server
 async function startServer() {
-    console.log('[Server] Starting custom server with Vite middleware...');
+    console.log('[Server] Starting...');
     try {
-        // Run database self healing automatically on startup
         try {
             await verifyAndHealPostgresSchema();
         } catch (healErr: any) {
-            console.error('[Schema Healer Error] Could not auto-heal:', healErr.message);
+            console.error('[Schema Healer Error]:', healErr.message);
         }
 
-        const isProduction = process.env.NODE_ENV === 'production' || typeof __filename !== 'undefined' && (__filename.endsWith('server.cjs') || __filename.includes('dist'));
+        const isProduction = process.env.NODE_ENV === 'production' ||
+            (typeof __filename !== 'undefined' && (__filename.endsWith('server.cjs') || __filename.includes('dist')));
 
         if (!isProduction) {
             try {
                 const vite = await createViteServer({
-                    server: { 
-                        middlewareMode: true,
-                        allowedHosts: true
-                    },
+                    server: { middlewareMode: true, allowedHosts: true as any },
                     appType: 'spa',
                 });
                 app.use(vite.middlewares);
-
                 app.get('*', async (req: any, res: any, next: any) => {
-                    const url = req.originalUrl;
                     try {
                         let template = fs.readFileSync(path.resolve(process.cwd(), 'index.html'), 'utf-8');
-                        template = await vite.transformIndexHtml(url, template);
+                        template = await vite.transformIndexHtml(req.originalUrl, template);
                         res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
                     } catch (e: any) {
                         vite.ssrFixStacktrace(e);
@@ -1529,7 +1283,7 @@ async function startServer() {
                     }
                 });
             } catch (viteErr: any) {
-                console.warn('[Server] Safe Fallback: Vite middleware failed. Serving static /dist files instead. Error:', viteErr.message);
+                console.warn('[Server] Vite failed, serving /dist:', viteErr.message);
                 serveStaticFilesHelper();
             }
         } else {
@@ -1539,28 +1293,20 @@ async function startServer() {
         function serveStaticFilesHelper() {
             const distPath = path.join(process.cwd(), 'dist');
             app.use(express.static(distPath));
-            app.get('*', (req, res) => {
-                res.sendFile(path.join(distPath, 'index.html'));
-            });
+            app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
         }
 
         app.listen(PORT, '0.0.0.0', () => {
-            console.log(`[Server] Success! Running on http://0.0.0.0:${PORT}`);
-
-            // Start global background interval yield scans (runs every 10 minutes)
-            setInterval(() => {
-                distributeGlobalROIWorker();
-            }, 600000);
-            
-            // Initial ROI scan
+            console.log(`[Server] Running on http://0.0.0.0:${PORT}`);
+            setInterval(() => distributeGlobalROIWorker(), 600000);
             distributeGlobalROIWorker();
         });
 
-        // Massive system background runner trigger
         app.get('/api/system/massive-roi-trigger', async (req: any, res: any) => {
             distributeGlobalROIWorker();
-            res.json({ success: true, message: "ROI Yield scanner dispatched." });
+            res.json({ success: true, message: 'ROI Yield scanner dispatched.' });
         });
+
     } catch (err: any) {
         console.error('[Server] CRITICAL START ERROR:', err);
     }

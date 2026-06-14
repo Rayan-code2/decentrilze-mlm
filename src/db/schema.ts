@@ -2,11 +2,12 @@ import { pgTable, serial, text, integer, doublePrecision, boolean, timestamp } f
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
-  uid: text('uid').notNull().unique(), // Firebase Auth UID
+  uid: text('uid').notNull().unique(),
   email: text('email').notNull(),
   name: text('name').notNull().default(''),
-  role: text('role').notNull().default('user'), // 'user' | 'admin'
-  isActive: boolean('is_active').notNull().default(true),
+  role: text('role').notNull().default('user'),
+  // FIX: isActive default FALSE - user active tabhi hoga jab package purchase kare
+  isActive: boolean('is_active').notNull().default(false),
   referredBy: text('referred_by'),
   directCount: integer('direct_count').notNull().default(0),
   isQualified: boolean('is_qualified').notNull().default(false),
@@ -23,7 +24,7 @@ export const users = pgTable('users', {
 
 export const wallets = pgTable('wallets', {
   id: serial('id').primaryKey(),
-  userId: text('user_id').notNull().unique(), // Firebase Auth UID (one wallet per user)
+  userId: text('user_id').notNull().unique(),
   balance: doublePrecision('balance').notNull().default(0.0),
   totalEarned: doublePrecision('total_earned').notNull().default(0.0),
   totalWithdrawn: doublePrecision('total_withdrawn').notNull().default(0.0),
@@ -52,15 +53,15 @@ export const mlmPackages = pgTable('packages', {
   maxRoiPercent: doublePrecision('max_roi_percent'),
   directIncomePercent: doublePrecision('direct_income_percent').notNull().default(0.0),
   matrixIncomePercent: doublePrecision('matrix_income_percent').notNull().default(0.0),
-  levelIncomePercents: text('level_income_percents').notNull().default('[]'), // array as JSON string
+  levelIncomePercents: text('level_income_percents').notNull().default('[]'),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
 export const purchases = pgTable('purchases', {
   id: serial('id').primaryKey(),
-  userId: text('user_id').notNull(), // User's Firebase UID
-  packageId: integer('package_id').notNull(), // references mlmPackages.id
+  userId: text('user_id').notNull(),
+  packageId: integer('package_id').notNull(),
   price: doublePrecision('price').notNull(),
   dailyRoi: doublePrecision('daily_roi'),
   roiIntervalMinutes: integer('roi_interval_minutes'),
@@ -72,10 +73,10 @@ export const purchases = pgTable('purchases', {
 
 export const transactions = pgTable('transactions', {
   id: serial('id').primaryKey(),
-  userId: text('user_id').notNull(), // User's Firebase UID or '1' / 'SYSTEM'
+  userId: text('user_id').notNull(),
   amount: doublePrecision('amount').notNull(),
-  type: text('type').notNull(), // 'roi' | 'level' | 'direct' | 'exchange' | 'task' | 'topup' | 'withdraw' | 'transfer' | 'spin' ...
-  status: text('status').notNull().default('completed'), // 'pending' | 'completed' | 'failed'
+  type: text('type').notNull(),
+  status: text('status').notNull().default('completed'),
   description: text('description'),
   fromUserId: text('from_user_id'),
   incomeLevel: integer('income_level'),
@@ -86,8 +87,8 @@ export const exchangerRequests = pgTable('exchanger_requests', {
   id: serial('id').primaryKey(),
   userId: text('user_id').notNull(),
   amount: doublePrecision('amount').notNull(),
-  type: text('type').notNull(), // 'deposit' | 'withdraw'
-  status: text('status').notNull().default('pending'), // 'approved' | 'rejected' | 'pending'
+  type: text('type').notNull(),
+  status: text('status').notNull().default('pending'),
   inrAmount: doublePrecision('inr_amount'),
   rate: doublePrecision('rate'),
   utrNumber: text('utr_number'),
@@ -99,7 +100,7 @@ export const exchangerRequests = pgTable('exchanger_requests', {
 
 export const goldQueue = pgTable('gold_queue', {
   id: serial('id').primaryKey(),
-  userId: text('user_id').notNull(), // User's Firebase UID
+  userId: text('user_id').notNull(),
   completed: boolean('completed').notNull().default(false),
   isRebirth: boolean('is_rebirth').notNull().default(false),
   payoutAt: timestamp('payout_at'),
@@ -132,7 +133,7 @@ export const settingsTable = pgTable('settings', {
   enableWithdrawal: boolean('enable_withdrawal').default(true),
   enableSwap: boolean('enable_swap').default(true),
   roiIntervalMinutes: integer('roi_interval_minutes'),
-  rankRewards: text('rank_rewards_json').default('[]'), // JSON array text
-  spinRewards: text('spin_rewards_json').default('[]'), // JSON array text
+  rankRewards: text('rank_rewards_json').default('[]'),
+  spinRewards: text('spin_rewards_json').default('[]'),
   createdAt: timestamp('created_at').defaultNow(),
 });
