@@ -933,8 +933,20 @@ app.post('/api/admin/delete-user', verifyAdmin, async (req: any, res: any) => {
 
 // Exchanger Request
 app.post('/api/exchanger/request', verifyAuth, async (req: any, res: any) => {
-    const { userId, amount, type, address, network, utrNumber, inrAmount, rate } = req.body;
+    const body = req.body || {};
+    const userId = body.userId || body.user_id;
+    const amount = body.amount;
+    const type = body.type;
+    const address = body.address;
+    const network = body.network;
+    const utrNumber = body.utrNumber || body.utr_number || body.utr || '';
+    const inrAmount = body.inrAmount || body.inr_amount;
+    const rate = body.rate;
+
     try {
+        if (!userId) {
+            return res.status(400).json({ success: false, message: 'Required parameter: userId is missing.' });
+        }
         const resolvedId = await resolveUserAuthId(userId) || userId;
         const fees = type === 'withdraw' ? 5.0 : 0.0;
         if (type === 'withdraw') {
