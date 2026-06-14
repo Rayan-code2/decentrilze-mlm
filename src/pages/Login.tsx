@@ -289,11 +289,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   <button 
                     onClick={toggleMockMode}
                     className="flex items-center gap-2 py-2 px-4 bg-white/[0.02] border border-white/5 rounded-full hover:border-white/10 hover:bg-white/[0.04] transition-all cursor-pointer"
-                    title={isCurrentlyMock ? "Switch back to Appwrite Cloud Mainnet" : "Switch to Fully Simulated Offline Testing with no server limits"}
+                    title={isCurrentlyMock ? "Switch back to PostgreSQL Mainnet" : "Switch to Fully Simulated Offline Testing with no server limits"}
                   >
                     <div className={`w-1.5 h-1.5 rounded-full ${isCurrentlyMock ? 'bg-amber-500 shadow-[0_0_10px_#f59e0b]' : 'bg-emerald-500 shadow-[0_0_10px_#10b981]'} animate-pulse`}></div>
                     <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">
-                      {isCurrentlyMock ? 'Protocol: Simulated Testnet' : 'Protocol: Appwrite Mainnet'}
+                      {isCurrentlyMock ? 'Protocol: Simulated Testnet' : 'Protocol: PostgreSQL Mainnet'}
                     </span>
                   </button>
                 </div>

@@ -312,7 +312,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
   };
 
   const handleDeleteUser = async (userId: string, userName: string) => {
-    if (!window.confirm(`⚠️ WARNING ⚠️\n\nAre you sure you want to permanently delete user "${userName}"?\n\nThis will delete:\n1. Appwrite Auth account\n2. User Profile document\n3. User Wallet document\n4. Active packages and transaction histories\n\nThis action cannot be undone! Proceed?`)) return;
+    if (!window.confirm(`⚠️ WARNING ⚠️\n\nAre you sure you want to permanently delete user "${userName}"?\n\nThis will delete:\n1. Mainframe Auth credentials\n2. User SQL Profile record\n3. User Wallet record\n4. Active packages and transaction histories\n\nThis action cannot be undone! Proceed?`)) return;
 
     try {
       const isLive = isAppwriteConfigured();
@@ -912,7 +912,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                     onClick={async () => {
                       setLoading(true);
                       try {
-                        setStatusMsg({ type: 'success', text: 'Initiating Appwrite Database Schema Healing...' });
+                        setStatusMsg({ type: 'success', text: 'Initiating SQL Database Schema Healing...' });
                         const res = await appwriteService.selfHealSchema();
                         if (res && res.success) {
                           const fieldsCreated = res.created_fields || [];
@@ -924,7 +924,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                           } else {
                             setStatusMsg({ 
                               type: 'success', 
-                              text: 'Schema is already healthy! No missing attributes in settings collection.' 
+                              text: 'Schema is already healthy! No missing columns in settings table.' 
                             });
                           }
                           fetchData();
@@ -940,7 +940,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                     }}
                     className="px-6 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-1.5"
                   >
-                    <Shield size={12} /> Auto-Fix Appwrite Columns
+                    <Shield size={12} /> Auto-Heal SQL Columns
                   </button>
                 )}
                 <button 
@@ -1208,31 +1208,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                 <div className="mt-8 p-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 w-full max-w-md">
                    <div className="flex items-center gap-3 mb-3">
                      <AlertTriangle size={20} className="text-amber-500" />
-                     <h4 className="text-xs font-black text-amber-500 uppercase tracking-widest">Important: Appwrite Permissions</h4>
+                     <h4 className="text-xs font-black text-amber-500 uppercase tracking-widest">Important: PostgreSQL Setup</h4>
                    </div>
                    <p className="text-[9px] text-slate-400 font-medium leading-relaxed mb-4">
-                     If Bootstrap says "Success" but the list is still empty, it means your Appwrite <b>Read Permissions</b> are missing. Follow these steps:
+                     If your application is running, packages will sync automatically from the database. If they are empty:
                    </p>
                    <div className="space-y-3">
                      <div className="flex gap-3 items-start">
                        <div className="mt-1 w-4 h-4 shrink-0 rounded-full bg-amber-500/20 flex items-center justify-center text-[7px] font-black text-amber-500 border border-amber-500/20">1</div>
-                       <p className="text-[8px] text-slate-300">Open Appwrite Console &gt; Go to <b>packages</b> collection.</p>
+                       <p className="text-[8px] text-slate-300">Run migrations or the <b>npm run db:push</b> script on your VPS.</p>
                      </div>
                      <div className="flex gap-3 items-start">
                        <div className="mt-1 w-4 h-4 shrink-0 rounded-full bg-amber-500/20 flex items-center justify-center text-[7px] font-black text-amber-500 border border-amber-500/20">2</div>
-                       <p className="text-[8px] text-slate-300">Click the <b>Settings</b> tab (top right).</p>
+                       <p className="text-[8px] text-slate-300">Verify your <b>DATABASE_URL</b> env variable in Node backend environment settings.</p>
                      </div>
                      <div className="flex gap-3 items-start">
                        <div className="mt-1 w-4 h-4 shrink-0 rounded-full bg-amber-500/20 flex items-center justify-center text-[7px] font-black text-amber-500 border border-amber-500/20">3</div>
-                       <p className="text-[8px] text-slate-300">Find <b>Permissions</b> &gt; Add Role: <b>"Any"</b>.</p>
-                     </div>
-                     <div className="flex gap-3 items-start">
-                       <div className="mt-1 w-4 h-4 shrink-0 rounded-full bg-amber-500/20 flex items-center justify-center text-[7px] font-black text-amber-500 border border-amber-500/20">4</div>
-                       <p className="text-[8px] text-slate-300">Check both <b>Read</b> and <b>Create</b> boxes.</p>
-                     </div>
-                     <div className="flex gap-3 items-start">
-                       <div className="mt-1 w-4 h-4 shrink-0 rounded-full bg-amber-500/20 flex items-center justify-center text-[7px] font-black text-amber-500 border border-amber-500/20">5</div>
-                       <p className="text-[8px] text-amber-400 font-bold uppercase tracking-tighter italic">Click "Update" at the bottom to save!</p>
+                       <p className="text-[8px] text-slate-300">Start the backend process using <b>pm2 restart cryptospiral</b> on VPS.</p>
                      </div>
                    </div>
                 </div>
@@ -1241,23 +1233,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                 <div className="mt-12 p-6 rounded-2xl bg-black/40 border border-white/5 w-full max-w-md">
                    <div className="flex items-center gap-2 mb-4 border-b border-white/5 pb-2">
                      <Shield size={12} className="text-slate-500" />
-                     <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Connection Diagnostics</h4>
+                     <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">PostgreSQL Diagnostics</h4>
                    </div>
                    <div className="space-y-3">
                      <div className="flex justify-between items-center group">
-                       <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Project ID</span>
-                       <span className="text-[9px] font-mono text-emerald-400/70 select-all tracking-tighter">69d5b8c6001a776e6ebe</span>
+                       <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Database Engine</span>
+                       <span className="text-[9px] font-mono text-emerald-400/70 select-all tracking-tighter">PostgreSQL v16+</span>
                      </div>
                      <div className="flex justify-between items-center">
-                       <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Database ID</span>
-                       <span className="text-[9px] font-mono text-emerald-400/70 select-all tracking-tighter">mlm_spiral</span>
+                       <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">ORM & Mapping</span>
+                       <span className="text-[9px] font-mono text-emerald-400/70 select-all tracking-tighter">Drizzle ORM</span>
                      </div>
                      <div className="flex justify-between items-center">
-                       <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Package Collect. ID</span>
-                       <span className="text-[9px] font-mono text-cyan-400 select-all tracking-tighter">packages</span>
+                       <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Mainframe Link</span>
+                       <span className="text-[9px] font-mono text-cyan-400 select-all tracking-tighter">Active SQL Connection</span>
                      </div>
                      <p className="text-[7px] text-slate-700 mt-4 leading-relaxed font-black uppercase tracking-widest">
-                       Verify these IDs match your Appwrite console. Ensure the collection has "Read" and "Create" permissions set to "Any" or "All Users".
+                       All tables are fully structured in PostgreSQL via schema.ts.
                      </p>
                    </div>
                 </div>

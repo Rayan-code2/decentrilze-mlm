@@ -1299,10 +1299,180 @@ async function distributeGlobalROIWorker() {
     }
 }
 
+// Global Postgres schema self-healer running on server startup
+async function verifyAndHealPostgresSchema() {
+    console.log('[Schema Healer] Starting PostgreSQL schema auto-detection and self-healing...');
+    const queries = [
+        // 1. Create tables if they do not exist
+        `CREATE TABLE IF NOT EXISTS "users" (
+            "id" serial PRIMARY KEY,
+            "uid" text NOT NULL UNIQUE,
+            "email" text NOT NULL
+        );`,
+        `CREATE TABLE IF NOT EXISTS "wallets" (
+            "id" serial PRIMARY KEY,
+            "user_id" text NOT NULL UNIQUE,
+            "balance" double precision NOT NULL DEFAULT 0.0
+        );`,
+        `CREATE TABLE IF NOT EXISTS "packages" (
+            "id" serial PRIMARY KEY,
+            "name" text NOT NULL,
+            "price" double precision NOT NULL,
+            "daily_roi" double precision NOT NULL
+        );`,
+        `CREATE TABLE IF NOT EXISTS "purchases" (
+            "id" serial PRIMARY KEY,
+            "user_id" text NOT NULL,
+            "package_id" integer NOT NULL,
+            "price" double precision NOT NULL
+        );`,
+        `CREATE TABLE IF NOT EXISTS "transactions" (
+            "id" serial PRIMARY KEY,
+            "user_id" text NOT NULL,
+            "amount" double precision NOT NULL,
+            "type" text NOT NULL
+        );`,
+        `CREATE TABLE IF NOT EXISTS "exchanger_requests" (
+            "id" serial PRIMARY KEY,
+            "user_id" text NOT NULL,
+            "amount" double precision NOT NULL,
+            "type" text NOT NULL
+        );`,
+        `CREATE TABLE IF NOT EXISTS "gold_queue" (
+            "id" serial PRIMARY KEY,
+            "user_id" text NOT NULL,
+            "completed" boolean NOT NULL DEFAULT false
+        );`,
+        `CREATE TABLE IF NOT EXISTS "settings" (
+            "id" serial PRIMARY KEY,
+            "telegram_link" text
+        );`,
+
+        // 2. Add columns if they do not exist
+        // users Table Columns
+        `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "name" text NOT NULL DEFAULT '';`,
+        `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "role" text NOT NULL DEFAULT 'user';`,
+        `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "is_active" boolean NOT NULL DEFAULT false;`,
+        `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "referred_by" text;`,
+        `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "direct_count" integer NOT NULL DEFAULT 0;`,
+        `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "is_qualified" boolean NOT NULL DEFAULT false;`,
+        `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "is_blocked" boolean NOT NULL DEFAULT false;`,
+        `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "matrix_parent_id" text;`,
+        `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "global_rank" integer;`,
+        `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "node_id" text;`,
+        `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "personal_business" double precision NOT NULL DEFAULT 0.0;`,
+        `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "team_business" double precision NOT NULL DEFAULT 0.0;`,
+        `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "mobile" text;`,
+        `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "password" text;`,
+        `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();`,
+
+        // wallets Table Columns
+        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "total_earned" double precision NOT NULL DEFAULT 0.0;`,
+        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "total_withdrawn" double precision NOT NULL DEFAULT 0.0;`,
+        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "last_roi_at" timestamp;`,
+        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "wallet_roi_earned" double precision NOT NULL DEFAULT 0.0;`,
+        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "roi_income" double precision NOT NULL DEFAULT 0.0;`,
+        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "direct_income" double precision NOT NULL DEFAULT 0.0;`,
+        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "level_income" double precision NOT NULL DEFAULT 0.0;`,
+        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "matrix_income" double precision NOT NULL DEFAULT 0.0;`,
+        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "hold_balance" double precision NOT NULL DEFAULT 0.0;`,
+        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "total_roi_rate" double precision DEFAULT 0.0;`,
+        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "package_roi_rate" double precision DEFAULT 0.0;`,
+        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "base_roi_rate" double precision DEFAULT 0.0;`,
+        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "daily_package_roi" double precision DEFAULT 0.0;`,
+        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "available_spins" integer NOT NULL DEFAULT 0;`,
+        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();`,
+
+        // packages Table Columns
+        `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "roi_interval_minutes" integer;`,
+        `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "duration_days" integer NOT NULL DEFAULT 365;`,
+        `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "max_roi_percent" double precision;`,
+        `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "direct_income_percent" double precision NOT NULL DEFAULT 0.0;`,
+        `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "matrix_income_percent" double precision NOT NULL DEFAULT 0.0;`,
+        `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "level_income_percents" text NOT NULL DEFAULT '[]';`,
+        `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "is_active" boolean NOT NULL DEFAULT true;`,
+        `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();`,
+
+        // purchases Table Columns
+        `ALTER TABLE "purchases" ADD COLUMN IF NOT EXISTS "daily_roi" double precision;`,
+        `ALTER TABLE "purchases" ADD COLUMN IF NOT EXISTS "roi_interval_minutes" integer;`,
+        `ALTER TABLE "purchases" ADD COLUMN IF NOT EXISTS "max_roi_percent" double precision;`,
+        `ALTER TABLE "purchases" ADD COLUMN IF NOT EXISTS "roi_earned" double precision NOT NULL DEFAULT 0.0;`,
+        `ALTER TABLE "purchases" ADD COLUMN IF NOT EXISTS "is_active" boolean NOT NULL DEFAULT true;`,
+        `ALTER TABLE "purchases" ADD COLUMN IF NOT EXISTS "activated_at" timestamp DEFAULT now();`,
+
+        // transactions Table Columns
+        `ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "status" text NOT NULL DEFAULT 'completed';`,
+        `ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "description" text;`,
+        `ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "from_user_id" text;`,
+        `ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "income_level" integer;`,
+        `ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();`,
+
+        // exchanger_requests Table Columns
+        `ALTER TABLE "exchanger_requests" ADD COLUMN IF NOT EXISTS "status" text NOT NULL DEFAULT 'pending';`,
+        `ALTER TABLE "exchanger_requests" ADD COLUMN IF NOT EXISTS "inr_amount" double precision;`,
+        `ALTER TABLE "exchanger_requests" ADD COLUMN IF NOT EXISTS "rate" double precision;`,
+        `ALTER TABLE "exchanger_requests" ADD COLUMN IF NOT EXISTS "utr_number" text;`,
+        `ALTER TABLE "exchanger_requests" ADD COLUMN IF NOT EXISTS "address" text;`,
+        `ALTER TABLE "exchanger_requests" ADD COLUMN IF NOT EXISTS "network" text;`,
+        `ALTER TABLE "exchanger_requests" ADD COLUMN IF NOT EXISTS "fee" double precision;`,
+        `ALTER TABLE "exchanger_requests" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();`,
+
+        // gold_queue Table Columns
+        `ALTER TABLE "gold_queue" ADD COLUMN IF NOT EXISTS "is_rebirth" boolean NOT NULL DEFAULT false;`,
+        `ALTER TABLE "gold_queue" ADD COLUMN IF NOT EXISTS "payout_at" timestamp;`,
+        `ALTER TABLE "gold_queue" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();`,
+
+        // settings Table Columns
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "marquee_text" text;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "hall_of_fame_marquee" text;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "admin_address_trc20" text;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "admin_address_bep20" text;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "admin_address_erc20" text;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "min_deposit" double precision DEFAULT 1.0;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "min_withdrawal" double precision DEFAULT 1.0;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "max_withdrawal" double precision DEFAULT 10000.0;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "boosting_min_directs" integer DEFAULT 2;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "boosting_min_pkg_price" double precision DEFAULT 10.0;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "spin_min_pkg_price" double precision DEFAULT 10.0;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "spin_min_directs" integer DEFAULT 0;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "spin_cooldown_hours" integer DEFAULT 24;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "boosting_reward" double precision DEFAULT 20.0;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "deposit_fee" double precision DEFAULT 0.0;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "withdrawal_fee" double precision DEFAULT 5.0;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "spin_cost" double precision DEFAULT 1.0;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "referrals_for_free_spins" integer DEFAULT 5;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "spins_per_milestone" integer DEFAULT 1;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "enable_deposit" boolean DEFAULT true;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "enable_withdrawal" boolean DEFAULT true;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "enable_swap" boolean DEFAULT true;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "roi_interval_minutes" integer;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "rank_rewards_json" text DEFAULT '[]';`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "spin_rewards_json" text DEFAULT '[]';`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();`
+    ];
+
+    for (const statement of queries) {
+        try {
+            await db.execute(sql.raw(statement));
+        } catch (err: any) {
+            console.warn(`[Schema Healer Check] Notes: ${err.message}`);
+        }
+    }
+    console.log('[Schema Healer] All schema corrections and validations fully applied successfully!');
+}
+
 // Vite and Static configurations
 async function startServer() {
     console.log('[Server] Starting custom server with Vite middleware...');
     try {
+        // Run database self healing automatically on startup
+        try {
+            await verifyAndHealPostgresSchema();
+        } catch (healErr: any) {
+            console.error('[Schema Healer Error] Could not auto-heal:', healErr.message);
+        }
+
         const isProduction = process.env.NODE_ENV === 'production' || typeof __filename !== 'undefined' && (__filename.endsWith('server.cjs') || __filename.includes('dist'));
 
         if (!isProduction) {

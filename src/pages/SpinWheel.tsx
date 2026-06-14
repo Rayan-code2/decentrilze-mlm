@@ -158,7 +158,8 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ user, wallet, onRefreshWallet, on
     if (onRefreshWallet) {
       onRefreshWallet();
     }
-  }, [user.id, user.user_id, onRefreshWallet]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.id, user.user_id]);
 
   useEffect(() => {
     setTimeLeft(null);
