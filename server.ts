@@ -208,7 +208,8 @@ const verifyAdmin = async (req: any, res: any, next: any) => {
 app.post('/api/auth/login', async (req: any, res: any) => {
     const { email, pass } = req.body;
     try {
-        const matches = await db.select().from(users).where(eq(users.email, email)).limit(1);
+        const cleanEmail = (email || '').trim().toLowerCase();
+        const matches = await db.select().from(users).where(eq(users.email, cleanEmail)).limit(1);
         if (matches.length === 0) {
             return res.status(400).json({ success: false, message: 'User not found.' });
         }
@@ -251,12 +252,13 @@ app.post('/api/auth/reset-password', async (req: any, res: any) => {
 // 1. Central Registration Route
 app.post('/api/auth/register', async (req: any, res: any) => {
     const { email, pass, name, referredBy, mobile } = req.body;
-    console.log(`[Registration Request] Email: ${email}, Sponsor: ${referredBy}`);
+    const cleanEmail = (email || '').trim().toLowerCase();
+    console.log(`[Registration Request] Email: ${cleanEmail}, Sponsor: ${referredBy}`);
     
     try {
-        const existingUsers = await db.select().from(users).where(eq(users.email, email)).limit(1);
+        const existingUsers = await db.select().from(users).where(eq(users.email, cleanEmail)).limit(1);
         if (existingUsers.length > 0) {
-            return res.status(400).json({ success: false, message: `Email ${email} is already registered.` });
+            return res.status(400).json({ success: false, message: `Email ${cleanEmail} is already registered.` });
         }
 
         if (mobile) {
@@ -277,7 +279,7 @@ app.post('/api/auth/register', async (req: any, res: any) => {
         // Create profile inside Postgres
         const createdUsers = await db.insert(users).values({
             uid: generatedUid,
-            email,
+            email: cleanEmail,
             name: name || '',
             role: 'user',
             referredBy: resolvedSponsor,
