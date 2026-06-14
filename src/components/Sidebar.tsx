@@ -13,7 +13,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, onLogout }) => {
-  const isAdmin = userRole?.toString().toLowerCase() === 'admin';
+  const isAdmin = String(userRole || '').toLowerCase() === 'admin';
   const isCurrentlyLive = isAppwriteConfigured();
 
   const toggleApiMode = () => {

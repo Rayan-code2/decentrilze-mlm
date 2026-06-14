@@ -1,71 +1,30 @@
-/// <reference types="vite/client" />
-import { Client, Account, Databases, Storage, Functions } from 'appwrite';
+export const getEndpoint = () => 'http://localhost:3000';
+export const getProjectId = () => 'postgres_sql_mainnet';
 
-// Silence annoying Appwrite SDK version mismatch warnings in the browser console
-if (typeof window !== 'undefined') {
-    const originalWarn = console.warn;
-    const originalLog = console.log;
-    const shouldSuppress = (msg: any) => {
-        if (typeof msg === 'string') {
-            return msg.includes('The current SDK is built for Appwrite') || 
-                   msg.includes('current Appwrite server version') || 
-                   msg.includes('Please downgrade your SDK') ||
-                   msg.includes('Appwrite version: https://appwrite.io');
-        }
-        return false;
-    };
-    console.warn = function (...args: any[]) {
-        if (args.length > 0 && shouldSuppress(args[0])) return;
-        originalWarn.apply(console, args);
-    };
-    console.log = function (...args: any[]) {
-        if (args.length > 0 && shouldSuppress(args[0])) return;
-        originalLog.apply(console, args);
-    };
-}
-
-export const getEndpoint = () => {
-    const envEndpoint = (import.meta.env.VITE_APPWRITE_ENDPOINT || import.meta.env.VITE_APPWRITE_EN || 'http://72.61.244.96:8080/v1').trim();
-    
-    // Only route requests via our Express proxy `/appwrite-api` if there is a mixed-content/TLS block
-    // (browser is running over HTTPS but Appwrite endpoint is cleartext HTTP IP/domain).
-    if (typeof window !== 'undefined') {
-        if (window.location.protocol === 'https:' && envEndpoint.startsWith('http://')) {
-            console.log("[Appwrite Connection] TLS mismatch resolved: Routing through browser HTTPS proxy.");
-            return `${window.location.origin}/appwrite-api`;
-        }
+export const client = {
+    subscribe: (channel: string, callback: (payload: any) => void) => {
+        console.log(`[Mock Realtime Subscribe] Subscribed to events on channel: ${channel}`);
+        return () => {
+            console.log(`[Mock Realtime Unsubscribe] Cleared subscription on channel: ${channel}`);
+        };
     }
-    return envEndpoint;
 };
 
-export const getProjectId = () => {
-    let projectId = (import.meta.env.VITE_APPWRITE_PROJECT_ID || import.meta.env.VITE_APPWRITE_PR || '6a215a4b0014ba00db87').trim();
-    if (projectId.includes('6a215a4b') || projectId === '69d5b8c6001a776e6ebe') {
-        projectId = '6a215a4b0014ba00db87';
-    }
-    return projectId;
-};
-
-export const client = new Client()
-    .setEndpoint(getEndpoint())
-    .setProject(getProjectId());
-
-export const account = new Account(client);
-export const databases = new Databases(client);
-export const storage = new Storage(client);
-export const functions = new Functions(client);
-
+export const account = {};
+export const databases = {};
+export const storage = {};
+export const functions = {};
 export const APPWRITE_CONFIG = {
-    databaseId: import.meta.env.VITE_APPWRITE_DATABASE_ID || import.meta.env.VITE_APPWRITE_DA || 'mlm_spiral',
+    databaseId: 'mlm_spiral',
     collections: {
-        users: import.meta.env.VITE_APPWRITE_USERS_COLLECTION_ID || 'users',
-        packages: import.meta.env.VITE_APPWRITE_PACKAGES_COLLECTION_ID || 'packages',
-        purchases: import.meta.env.VITE_APPWRITE_USER_PACKAGES_COLLECTION_ID || (import.meta.env.VITE_APPWRITE_PURCHASES_COLLECTION_ID === 'purchases' ? 'user_packages' : (import.meta.env.VITE_APPWRITE_PURCHASES_COLLECTION_ID || 'user_packages')),
-        goldQueue: import.meta.env.VITE_APPWRITE_GOLD_QUEUE_COLLECTION_ID || 'gold_queue',
-        wallets: import.meta.env.VITE_APPWRITE_WALLETS_COLLECTION_ID || 'wallets',
-        transactions: import.meta.env.VITE_APPWRITE_TRANSACTIONS_COLLECTION_ID || 'transactions',
-        exchanger_requests: import.meta.env.VITE_APPWRITE_EXCHANGER_REQUESTS_COLLECTION_ID || 'exchanger_requests',
-        settings: import.meta.env.VITE_APPWRITE_SETTINGS_COLLECTION_ID || 'settings',
+        users: 'users',
+        packages: 'packages',
+        purchases: 'purchases',
+        goldQueue: 'gold_queue',
+        wallets: 'wallets',
+        transactions: 'transactions',
+        exchanger_requests: 'exchanger_requests',
+        settings: 'settings',
     }
 };
 
@@ -73,12 +32,17 @@ export const isAppwriteConfigured = () => {
     if (localStorage.getItem('spiral_use_mock_api') === 'true') {
         return false;
     }
-    // Only return true if an actual project ID is supplied explicitly via environment variables
-    const rawProjectId = import.meta.env.VITE_APPWRITE_PROJECT_ID || import.meta.env.VITE_APPWRITE_PR;
-    if (!rawProjectId || rawProjectId.trim() === '' || rawProjectId === 'YOUR_PROJECT_ID') {
-        return false;
-    }
     return true;
 };
 
-export { ID, Query } from 'appwrite';
+export const ID = {
+    unique: () => Math.random().toString(36).substring(2, 12).toUpperCase()
+};
+
+export const Query = {
+    equal: (key: string, val: any) => `${key}=${val}`,
+    limit: (l: number) => `limit=${l}`,
+    orderAsc: (key: string) => `orderAsc=${key}`,
+    cursorAfter: (id: string) => `after=${id}`
+};
+export { Query as default };

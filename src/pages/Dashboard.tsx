@@ -311,7 +311,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   }, [user.name, user.email]);
 
   const referralLink = useMemo(() => {
-    const baseUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
+    const baseUrl = (import.meta as any).env.VITE_SITE_URL || window.location.origin;
     return `${baseUrl}/?ref=${user.id}`;
   }, [user.id]);
 

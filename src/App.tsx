@@ -338,8 +338,11 @@ const App: React.FC = () => {
               <ShieldAlert className="w-5 h-5 text-red-500" />
               Connection Diagnostics
             </h3>
-            <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+            <p className="text-xs text-slate-400 mb-2 leading-relaxed">
               Mainframe sync is taking longer than expected. If your Appwrite server is inactive or misconfigured, you can bypass this screen and run in local simulation mode.
+            </p>
+            <p className="text-xs text-amber-400/90 mb-4 font-medium leading-relaxed border-l-2 border-amber-500/40 pl-2">
+              ध्यान दें: अगर आपका Appwrite सर्वर चालू नहीं है, तो नीचे दिए गए <strong className="text-amber-300">"[ FORCE LOCAL MOCK MODE ]"</strong> बटन पर क्लिक करें। इससे आपका एप्लीकेशन डेमो मोड में तुरंत लॉगिन और काम करने लगेगा!
             </p>
             
             <div className="bg-slate-950/80 p-3 rounded-lg border border-slate-800 font-mono text-[10px] space-y-1 mb-5">

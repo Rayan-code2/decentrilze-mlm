@@ -8,83 +8,89 @@ console.log('===================================================');
 
 // 1. Read and parse physical .env file
 const envPath = path.resolve('.env');
-if (!fs.existsSync(envPath)) {
-    console.error('❌ ERROR: .env file does not exist in the current directory!');
-    console.log('Please make sure you are in the correct directory: cd ~/decentrilze-mlm');
-    process.exit(1);
-}
+let endpoint = process.env.VITE_APPWRITE_ENDPOINT || '';
+let projectId = process.env.VITE_APPWRITE_PROJECT_ID || '';
+let apiKey = process.env.APPWRITE_API_KEY || '';
+let databaseId = process.env.VITE_APPWRITE_DATABASE_ID || '';
 
-const envContent = fs.readFileSync(envPath, 'utf8');
-const lines = envContent.split(/\r?\n/);
-
-let endpoint = '';
-let projectId = '';
-let apiKey = '';
-let databaseId = '';
-
-let hasCarriageReturn = envContent.includes('\r');
-let hasTrailingAngleBracket = false;
-
-for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
+if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    const lines = envContent.split(/\r?\n/);
     
-    const parts = line.split('=');
-    if (parts.length >= 2) {
-        const key = parts[0].trim();
-        let value = parts.slice(1).join('=').trim();
+    let hasCarriageReturn = envContent.includes('\r');
+    let hasTrailingAngleBracket = false;
+    
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
         
-        // Remove quotes if present
-        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-            value = value.slice(1, -1);
-        }
-
-        if (key === 'VITE_APPWRITE_ENDPOINT') endpoint = value;
-        if (key === 'VITE_APPWRITE_PROJECT_ID') projectId = value;
-        if (key === 'APPWRITE_API_KEY') {
-            apiKey = value;
-            if (value.endsWith('>')) {
-                hasTrailingAngleBracket = true;
+        const parts = line.split('=');
+        if (parts.length >= 2) {
+            const key = parts[0].trim();
+            let value = parts.slice(1).join('=').trim();
+            
+            // Remove quotes if present
+            if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+                value = value.slice(1, -1);
             }
+    
+            if (key === 'VITE_APPWRITE_ENDPOINT') endpoint = value;
+            if (key === 'VITE_APPWRITE_PROJECT_ID') projectId = value;
+            if (key === 'APPWRITE_API_KEY') {
+                apiKey = value;
+                if (value.endsWith('>')) {
+                    hasTrailingAngleBracket = true;
+                }
+            }
+            if (key === 'VITE_APPWRITE_DATABASE_ID') databaseId = value;
         }
-        if (key === 'VITE_APPWRITE_DATABASE_ID') databaseId = value;
     }
-}
-
-console.log('\n--- 1. Environemnt File (.env) Analysis ---');
-console.log(`Endpoint:     ${endpoint || '❌ NOT SET'}`);
-console.log(`Project ID:   ${projectId || '❌ NOT SET'}`);
-console.log(`Database ID:  ${databaseId || '❌ NOT SET'}`);
-
-if (apiKey) {
-    const visibleStart = apiKey.substring(0, 8);
-    const visibleEnd = apiKey.slice(-8);
-    console.log(`API Key:      ${visibleStart}...${visibleEnd} (Length: ${apiKey.length} characters)`);
+    
+    console.log('\n--- 1. Environment File (.env) Analysis ---');
+    console.log(`Endpoint:     ${endpoint || '❌ NOT SET'}`);
+    console.log(`Project ID:   ${projectId || '❌ NOT SET'}`);
+    console.log(`Database ID:  ${databaseId || '❌ NOT SET'}`);
+    
+    if (apiKey) {
+        const visibleStart = apiKey.substring(0, 8);
+        const visibleEnd = apiKey.slice(-8);
+        console.log(`API Key:      ${visibleStart}...${visibleEnd} (Length: ${apiKey.length} characters)`);
+    } else {
+        console.log('API Key:      ❌ NOT SET');
+    }
+    
+    // Check common formatting errors
+    let recommendedFix = false;
+    if (hasCarriageReturn) {
+        console.log('⚠️ Warning: File uses Windows-style line endings (\\r\\n). This can cause issues on Linux.');
+        recommendedFix = true;
+    }
+    if (hasTrailingAngleBracket) {
+        console.log('❌ Error: Trailing \'>\' detected at the end of your API Key! This usually happens when nano wraps text.');
+        recommendedFix = true;
+    }
+    if (apiKey && (apiKey.includes(' ') || apiKey.includes('\t'))) {
+        console.log('❌ Error: API Key contains spaces or tabs!');
+        recommendedFix = true;
+    }
+    
+    if (recommendedFix) {
+        console.log('\n👉 HOW TO FIX YOUR .env FILE:');
+        console.log('Run the following command on your server to automatically clean your .env file:');
+        console.log('  sed -i \'s/\\r//g\' .env && sed -i \'s/>$//g\' .env');
+    } else {
+        console.log('✅ .env file formatting looks clean!');
+    }
 } else {
-    console.log('API Key:      ❌ NOT SET');
-}
-
-// Check common formatting errors
-let recommendedFix = false;
-if (hasCarriageReturn) {
-    console.log('⚠️ Warning: File uses Windows-style line endings (\\r\\n). This can cause issues on Linux.');
-    recommendedFix = true;
-}
-if (hasTrailingAngleBracket) {
-    console.log('❌ Error: Trailing \'>\' detected at the end of your API Key! This usually happens when nano wraps text.');
-    recommendedFix = true;
-}
-if (apiKey && (apiKey.includes(' ') || apiKey.includes('\t'))) {
-    console.log('❌ Error: API Key contains spaces or tabs!');
-    recommendedFix = true;
-}
-
-if (recommendedFix) {
-    console.log('\n👉 HOW TO FIX YOUR .env FILE:');
-    console.log('Run the following command on your server to automatically clean your .env file:');
-    console.log('  sed -i \'s/\\r//g\' .env && sed -i \'s/>$//g\' .env');
-} else {
-    console.log('✅ .env file formatting looks clean!');
+    console.log('\n--- 1. Environment Analysis (process.env) ---');
+    console.log(`Endpoint:     ${endpoint || '❌ NOT SET'}`);
+    console.log(`Project ID:   ${projectId || '❌ NOT SET'}`);
+    console.log(`Database ID:  ${databaseId || '❌ NOT SET'}`);
+    if (apiKey) {
+        console.log(`API Key:      ${apiKey.substring(0, 8)}...${apiKey.slice(-8)} (Length: ${apiKey.length} characters)`);
+    } else {
+        console.log('API Key:      ❌ NOT SET');
+    }
 }
 
 // 2. Connectivity check

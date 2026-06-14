@@ -63,7 +63,7 @@ const IncomeDetails: React.FC<IncomeDetailsProps> = ({ user, wallet }) => {
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter(tx => {
-      const type = tx.type.toLowerCase();
+      const type = String(tx.type || '').toLowerCase();
       const matchesFilter = filter === 'all' || 
                            (filter === 'roi' && (type.includes('roi'))) ||
                            (filter === 'level' && (type.includes('level'))) ||
@@ -71,8 +71,8 @@ const IncomeDetails: React.FC<IncomeDetailsProps> = ({ user, wallet }) => {
                            (filter === 'direct' && (type.includes('direct'))) ||
                            (filter === 'spin' && type.includes('spin'));
       
-      const matchesSearch = tx.id.toLowerCase().includes(search.toLowerCase()) || 
-                           tx.type.toLowerCase().includes(search.toLowerCase()) ||
+      const matchesSearch = String(tx.id || '').toLowerCase().includes(search.toLowerCase()) || 
+                           String(tx.type || '').toLowerCase().includes(search.toLowerCase()) ||
                            tx.description?.toLowerCase().includes(search.toLowerCase());
       return matchesFilter && matchesSearch;
     });
@@ -93,7 +93,7 @@ const IncomeDetails: React.FC<IncomeDetailsProps> = ({ user, wallet }) => {
       // Treat as completed if status is missing or explicitly completed
       if (!tx.status || tx.status === 'completed') {
         const amt = Number(tx.amount || 0);
-        const type = tx.type.toLowerCase();
+        const type = String(tx.type || '').toLowerCase();
         if (type.includes('roi')) computed.roi += amt;
         else if (type.includes('level')) computed.level += amt;
         else if (type.includes('matrix') || type.includes('placement')) computed.matrix += amt;

@@ -1,0 +1,137 @@
+import { pgTable, serial, text, integer, doublePrecision, boolean, timestamp } from 'drizzle-orm/pg-core';
+
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  uid: text('uid').notNull().unique(), // Firebase Auth UID
+  email: text('email').notNull(),
+  name: text('name').notNull().default(''),
+  role: text('role').notNull().default('user'), // 'user' | 'admin'
+  isActive: boolean('is_active').notNull().default(true),
+  referredBy: text('referred_by'),
+  directCount: integer('direct_count').notNull().default(0),
+  isQualified: boolean('is_qualified').notNull().default(false),
+  isBlocked: boolean('is_blocked').notNull().default(false),
+  matrixParentId: text('matrix_parent_id'),
+  globalRank: integer('global_rank'),
+  nodeId: text('node_id'),
+  personalBusiness: doublePrecision('personal_business').notNull().default(0.0),
+  teamBusiness: doublePrecision('team_business').notNull().default(0.0),
+  mobile: text('mobile'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const wallets = pgTable('wallets', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull().unique(), // Firebase Auth UID (one wallet per user)
+  balance: doublePrecision('balance').notNull().default(0.0),
+  totalEarned: doublePrecision('total_earned').notNull().default(0.0),
+  totalWithdrawn: doublePrecision('total_withdrawn').notNull().default(0.0),
+  lastRoiAt: timestamp('last_roi_at'),
+  walletRoiEarned: doublePrecision('wallet_roi_earned').notNull().default(0.0),
+  roiIncome: doublePrecision('roi_income').notNull().default(0.0),
+  directIncome: doublePrecision('direct_income').notNull().default(0.0),
+  levelIncome: doublePrecision('level_income').notNull().default(0.0),
+  matrixIncome: doublePrecision('matrix_income').notNull().default(0.0),
+  holdBalance: doublePrecision('hold_balance').notNull().default(0.0),
+  totalRoiRate: doublePrecision('total_roi_rate').default(0.0),
+  packageRoiRate: doublePrecision('package_roi_rate').default(0.0),
+  baseRoiRate: doublePrecision('base_roi_rate').default(0.0),
+  dailyPackageRoi: doublePrecision('daily_package_roi').default(0.0),
+  availableSpins: integer('available_spins').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const mlmPackages = pgTable('packages', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  price: doublePrecision('price').notNull(),
+  dailyRoi: doublePrecision('daily_roi').notNull(),
+  roiIntervalMinutes: integer('roi_interval_minutes'),
+  durationDays: integer('duration_days').notNull().default(365),
+  maxRoiPercent: doublePrecision('max_roi_percent'),
+  directIncomePercent: doublePrecision('direct_income_percent').notNull().default(0.0),
+  matrixIncomePercent: doublePrecision('matrix_income_percent').notNull().default(0.0),
+  levelIncomePercents: text('level_income_percents').notNull().default('[]'), // array as JSON string
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const purchases = pgTable('purchases', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull(), // User's Firebase UID
+  packageId: integer('package_id').notNull(), // references mlmPackages.id
+  price: doublePrecision('price').notNull(),
+  dailyRoi: doublePrecision('daily_roi'),
+  roiIntervalMinutes: integer('roi_interval_minutes'),
+  maxRoiPercent: doublePrecision('max_roi_percent'),
+  roiEarned: doublePrecision('roi_earned').notNull().default(0.0),
+  isActive: boolean('is_active').notNull().default(true),
+  activatedAt: timestamp('activated_at').defaultNow(),
+});
+
+export const transactions = pgTable('transactions', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull(), // User's Firebase UID or '1' / 'SYSTEM'
+  amount: doublePrecision('amount').notNull(),
+  type: text('type').notNull(), // 'roi' | 'level' | 'direct' | 'exchange' | 'task' | 'topup' | 'withdraw' | 'transfer' | 'spin' ...
+  status: text('status').notNull().default('completed'), // 'pending' | 'completed' | 'failed'
+  description: text('description'),
+  fromUserId: text('from_user_id'),
+  incomeLevel: integer('income_level'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const exchangerRequests = pgTable('exchanger_requests', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  amount: doublePrecision('amount').notNull(),
+  type: text('type').notNull(), // 'deposit' | 'withdraw'
+  status: text('status').notNull().default('pending'), // 'approved' | 'rejected' | 'pending'
+  inrAmount: doublePrecision('inr_amount'),
+  rate: doublePrecision('rate'),
+  utrNumber: text('utr_number'),
+  address: text('address'),
+  network: text('network'),
+  fee: doublePrecision('fee'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const goldQueue = pgTable('gold_queue', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull(), // User's Firebase UID
+  completed: boolean('completed').notNull().default(false),
+  isRebirth: boolean('is_rebirth').notNull().default(false),
+  payoutAt: timestamp('payout_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const settingsTable = pgTable('settings', {
+  id: serial('id').primaryKey(),
+  telegramLink: text('telegram_link'),
+  marqueeText: text('marquee_text'),
+  hallOfFameMarquee: text('hall_of_fame_marquee'),
+  adminAddressTrc20: text('admin_address_trc20'),
+  adminAddressBep20: text('admin_address_bep20'),
+  adminAddressErc20: text('admin_address_erc20'),
+  minDeposit: doublePrecision('min_deposit').default(1.0),
+  minWithdrawal: doublePrecision('min_withdrawal').default(1.0),
+  maxWithdrawal: doublePrecision('max_withdrawal').default(10000.0),
+  boostingMinDirects: integer('boosting_min_directs').default(2),
+  boostingMinPkgPrice: doublePrecision('boosting_min_pkg_price').default(10.0),
+  spinMinPkgPrice: doublePrecision('spin_min_pkg_price').default(10.0),
+  spinMinDirects: integer('spin_min_directs').default(0),
+  spinCooldownHours: integer('spin_cooldown_hours').default(24),
+  boostingReward: doublePrecision('boosting_reward').default(20.0),
+  depositFee: doublePrecision('deposit_fee').default(0.0),
+  withdrawalFee: doublePrecision('withdrawal_fee').default(5.0),
+  spinCost: doublePrecision('spin_cost').default(1.0),
+  referralsForFreeSpins: integer('referrals_for_free_spins').default(5),
+  spinsPerMilestone: integer('spins_per_milestone').default(1),
+  enableDeposit: boolean('enable_deposit').default(true),
+  enableWithdrawal: boolean('enable_withdrawal').default(true),
+  enableSwap: boolean('enable_swap').default(true),
+  roiIntervalMinutes: integer('roi_interval_minutes'),
+  rankRewards: text('rank_rewards_json').default('[]'), // JSON array text
+  spinRewards: text('spin_rewards_json').default('[]'), // JSON array text
+  createdAt: timestamp('created_at').defaultNow(),
+});
