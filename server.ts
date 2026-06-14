@@ -179,7 +179,8 @@ function cleanErrorMessage(err: any): string {
     const isSafe = safeMessages.some(s => msg.toLowerCase().includes(s.toLowerCase()));
     if (isSafe) return msg;
 
-    return 'An unexpected server error occurred. Please try again.';
+    const sanitizedMsg = msg.replace(/:\/\/.*@/g, '://***:***@');
+    return `An unexpected server error occurred: ${sanitizedMsg}. Please try again.`;
 }
 
 function generateToken(userId: string): string {
