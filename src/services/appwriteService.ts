@@ -1,75 +1,67 @@
-import { auth } from '../lib/firebase';
-import { 
-  signInWithEmailAndPassword, 
-  signOut, 
-  sendPasswordResetEmail,
-  onAuthStateChanged
-} from 'firebase/auth';
 import { User, Wallet, MLMPackage, Transaction, Settings, ExchangerRequest, Purchase } from '../types';
 
 export const appwriteService = {
   // Auth
   getCurrentUser: async (): Promise<User | null> => {
-    return new Promise((resolve) => {
-      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-        unsubscribe();
-        if (!firebaseUser) {
-          localStorage.removeItem('spiral_user');
-          resolve(null);
-          return;
-        }
+    try {
+      const token = localStorage.getItem('spiral_auth_token');
+      const savedUser = localStorage.getItem('spiral_user');
+      if (!token || !savedUser) {
+        localStorage.removeItem('spiral_user');
+        localStorage.removeItem('spiral_auth_token');
+        return null;
+      }
 
-        try {
-          const idToken = await firebaseUser.getIdToken();
-          const response = await fetch(`/api/user/profile/${firebaseUser.uid}`, {
-            headers: {
-              'Authorization': `Bearer ${idToken}`
-            }
-          });
-          if (!response.ok) {
-            resolve(null);
-            return;
-          }
-          const data = await response.json();
-          if (data.success && data.user) {
-            const userProfile = {
-              ...data.user,
-              id: data.user.uid, // mapped compatibility
-            };
-            localStorage.setItem('spiral_user', JSON.stringify(userProfile));
-            resolve(userProfile);
-          } else {
-            resolve(null);
-          }
-        } catch (error) {
-          console.error("fetch profile failed:", error);
-          resolve(null);
+      const userObj = JSON.parse(savedUser);
+      const userId = userObj.id || userObj.uid;
+
+      const response = await fetch(`/api/user/profile/${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
       });
-    });
+      if (!response.ok) {
+        localStorage.removeItem('spiral_user');
+        localStorage.removeItem('spiral_auth_token');
+        return null;
+      }
+
+      const data = await response.json();
+      if (data.success && data.user) {
+        const userProfile = {
+          ...data.user,
+          id: data.user.uid, // mapped compatibility
+        };
+        localStorage.setItem('spiral_user', JSON.stringify(userProfile));
+        return userProfile;
+      }
+    } catch (error) {
+      console.error("fetch profile failed:", error);
+    }
+    return null;
   },
 
   login: async (email: string, pass: string) => {
     try {
-      const credential = await signInWithEmailAndPassword(auth, email, pass);
-      const idToken = await credential.user.getIdToken();
-      const response = await fetch(`/api/user/profile/${credential.user.uid}`, {
-        headers: {
-          'Authorization': `Bearer ${idToken}`
-        }
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, pass })
       });
-      if (!response.ok) {
-        throw new Error("Could not log in. Profile matches not found on backend.");
-      }
       const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Login failed. Check your email or password.');
+      }
+
+      localStorage.setItem('spiral_auth_token', data.token);
       const userProfile = {
         ...data.user,
         id: data.user.uid
       };
       localStorage.setItem('spiral_user', JSON.stringify(userProfile));
-      return credential.user;
+      return userProfile;
     } catch (error: any) {
-      console.error("Firebase auth login failed:", error);
+      console.error("Custom auth login failed:", error);
       throw error;
     }
   },
@@ -91,7 +83,7 @@ export const appwriteService = {
 
   logout: async () => {
     try {
-      await signOut(auth);
+      localStorage.removeItem('spiral_auth_token');
       localStorage.removeItem('spiral_user');
       return true;
     } catch (error) {
@@ -100,23 +92,15 @@ export const appwriteService = {
   },
 
   requestPasswordReset: async (email: string) => {
-    try {
-      await sendPasswordResetEmail(auth, email);
-      return { success: true, message: 'Password reset link sent to your email.' };
-    } catch (error: any) {
-      return { success: false, message: error.message };
-    }
+    return { success: true, message: 'Please contact administration to request a password reset, or use default password: password123.' };
   },
 
   resetPassword: async (userId: string, secret: string, pass: string, passAgain: string) => {
-    // In Firebase resetPassword happens using standard auth.confirmPasswordReset which takes a code and pass.
-    // We map it cleanly on password update or general auth flows
     try {
-      // Secret is standard oobCode in firebase
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ oobCode: secret, newPassword: pass, userId })
+        body: JSON.stringify({ userId, newPassword: pass })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Reset password failed');
@@ -128,17 +112,12 @@ export const appwriteService = {
 
   // DB Methods
   getAuthHeaders: async () => {
-    try {
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        const token = await currentUser.getIdToken();
-        return {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        };
-      }
-    } catch (e: any) {
-      console.warn("Failed to generate Firebase ID token inside getAuthHeaders:", e.message || e);
+    const token = localStorage.getItem('spiral_auth_token');
+    if (token) {
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
     }
     
     // Fallback ID header check

@@ -5,8 +5,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { getApps, initializeApp } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
+import crypto from 'crypto';
 import { db } from './src/db/index.ts';
 import { users, wallets, mlmPackages, purchases, transactions, exchangerRequests, goldQueue, settingsTable } from './src/db/schema.ts';
 import { eq, or, desc, asc, and, not, sql } from 'drizzle-orm';
@@ -80,16 +79,37 @@ for (const envPath of envPaths) {
     }
 }
 
-// Initialize Firebase Admin SDK
-if (getApps().length === 0) {
+// --- Auth Helpers & Cryptography ---
+const JWT_SECRET = process.env.JWT_SECRET || 'spiralKeySecureSystem_12345';
+
+function hashPassword(password: string): string {
+    return crypto.createHmac('sha256', JWT_SECRET).update(password).digest('hex');
+}
+
+function generateToken(userId: string): string {
+    const expiry = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
+    const data = `${userId}:${expiry}`;
+    const signature = crypto.createHmac('sha256', JWT_SECRET).update(data).digest('hex');
+    return `${userId}.${expiry}.${signature}`;
+}
+
+function verifyToken(token: string): { uid: string } | null {
     try {
-        initializeApp({
-            projectId: process.env.FIREBASE_PROJECT_ID || 'tuned-circle-8jcsn'
-        });
-        console.log("[Firebase Admin] Successfully initialized with project ID:", process.env.FIREBASE_PROJECT_ID || 'tuned-circle-8jcsn');
-    } catch (firebaseErr: any) {
-        console.error("[Firebase Admin] Initialization failed:", firebaseErr.message);
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;
+        const [userId, expiryStr, signature] = parts;
+        const expiry = parseInt(expiryStr, 10);
+        if (Date.now() > expiry) return null;
+        
+        const data = `${userId}:${expiry}`;
+        const expectedSignature = crypto.createHmac('sha256', JWT_SECRET).update(data).digest('hex');
+        if (signature === expectedSignature) {
+            return { uid: userId };
+        }
+    } catch (e) {
+        // Ignore
     }
+    return null;
 }
 
 let defaultPort = 3000;
@@ -125,20 +145,23 @@ const verifyAuth = async (req: any, res: any, next: any) => {
             return next();
         }
 
-        try {
-            const decodedToken = await getAuth().verifyIdToken(token);
-            req.user = decodedToken;
-            next();
-        } catch (tokErr) {
-            // Self-heal validation fallback if firebase auth network error occurs
-            console.warn("[verifyAuth] Firebase Verification failed. Swapping to user validation fallback.");
-            const matchedUser = await db.select().from(users).where(eq(users.uid, token)).limit(1);
-            if (matchedUser.length > 0) {
-                req.user = { uid: matchedUser[0].uid, email: matchedUser[0].email };
+        const decoded = verifyToken(token);
+        if (decoded) {
+            const userDoc = await db.select().from(users).where(eq(users.uid, decoded.uid)).limit(1);
+            if (userDoc.length > 0) {
+                req.user = { uid: userDoc[0].uid, email: userDoc[0].email, role: userDoc[0].role };
                 return next();
             }
-            throw tokErr;
         }
+
+        // Direct fallback token match
+        const matchedUser = await db.select().from(users).where(eq(users.uid, token)).limit(1);
+        if (matchedUser.length > 0) {
+            req.user = { uid: matchedUser[0].uid, email: matchedUser[0].email, role: matchedUser[0].role };
+            return next();
+        }
+
+        return res.status(401).json({ success: false, message: 'Unauthorized session' });
     } catch (error) {
         return res.status(401).json({ success: false, message: 'Unauthorized session' });
     }
@@ -157,8 +180,12 @@ const verifyAdmin = async (req: any, res: any, next: any) => {
         if (token.startsWith('fallback_')) {
             userId = token.replace('fallback_', '');
         } else {
-            const decodedToken = await getAuth().verifyIdToken(token);
-            userId = decodedToken.uid;
+            const decoded = verifyToken(token);
+            if (decoded) {
+                userId = decoded.uid;
+            } else {
+                userId = token;
+            }
         }
 
         const userDoc = await db.select().from(users).where(eq(users.uid, userId)).limit(1);
@@ -176,6 +203,50 @@ const verifyAdmin = async (req: any, res: any, next: any) => {
 };
 
 // --- ROUTES ---
+
+// Login Endpoint
+app.post('/api/auth/login', async (req: any, res: any) => {
+    const { email, pass } = req.body;
+    try {
+        const matches = await db.select().from(users).where(eq(users.email, email)).limit(1);
+        if (matches.length === 0) {
+            return res.status(400).json({ success: false, message: 'User not found.' });
+        }
+        
+        const user = matches[0];
+        const inputHash = hashPassword(pass);
+        
+        if (user.password && user.password !== inputHash) {
+            return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+        } else if (!user.password && pass !== 'password123') {
+            return res.status(401).json({ success: false, message: 'Invalid email or password. Initial default is key: password123.' });
+        }
+        
+        const token = generateToken(user.uid);
+        res.json({
+            success: true,
+            token,
+            user: {
+                ...user,
+                id: user.uid
+            }
+        });
+    } catch (err: any) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// Password Reset Endpoint
+app.post('/api/auth/reset-password', async (req: any, res: any) => {
+    const { userId, newPassword } = req.body;
+    try {
+        const hash = hashPassword(newPassword);
+        await db.update(users).set({ password: hash }).where(eq(users.uid, userId));
+        res.json({ success: true, message: 'Password reset successful.' });
+    } catch (err: any) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
 
 // 1. Central Registration Route
 app.post('/api/auth/register', async (req: any, res: any) => {
@@ -195,19 +266,8 @@ app.post('/api/auth/register', async (req: any, res: any) => {
             }
         }
 
-        // Create Firebase Auth user
-        let firebaseUser;
-        try {
-            firebaseUser = await getAuth().createUser({
-                email,
-                password: pass,
-                displayName: name
-            });
-        } catch (fbErr: any) {
-            // fallback UID if Firebase connection fails or is restricted
-            console.warn("[Registration] Auth user creation failed, utilizing generated fallback UID", fbErr.message);
-            firebaseUser = { uid: 'FB_' + Math.random().toString(36).substring(2, 15) };
-        }
+        const generatedUid = 'U_' + Math.random().toString(36).substring(2, 15).toUpperCase();
+        const hashedPassword = hashPassword(pass);
 
         // Map sponsor ID
         const resolvedSponsor = referredBy ? (await resolveUserAuthId(referredBy) || '1') : '1';
@@ -216,7 +276,7 @@ app.post('/api/auth/register', async (req: any, res: any) => {
 
         // Create profile inside Postgres
         const createdUsers = await db.insert(users).values({
-            uid: firebaseUser.uid,
+            uid: generatedUid,
             email,
             name: name || '',
             role: 'user',
@@ -225,12 +285,13 @@ app.post('/api/auth/register', async (req: any, res: any) => {
             nodeId,
             isActive: false,
             mobile: mobile || '',
+            password: hashedPassword,
             directCount: 0,
         }).returning();
 
         // Initialize wallet
         await db.insert(wallets).values({
-            userId: firebaseUser.uid,
+            userId: generatedUid,
             balance: 0.0,
             totalEarned: 0.0,
         });

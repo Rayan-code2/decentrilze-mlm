@@ -9,7 +9,9 @@
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "db:push": "drizzle-kit push --config=src/db/drizzle.config.ts",
+    "db:studio": "drizzle-kit studio --config=src/db/drizzle.config.ts"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",

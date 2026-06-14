@@ -17,6 +17,7 @@ export const users = pgTable('users', {
   personalBusiness: doublePrecision('personal_business').notNull().default(0.0),
   teamBusiness: doublePrecision('team_business').notNull().default(0.0),
   mobile: text('mobile'),
+  password: text('password'),
   createdAt: timestamp('created_at').defaultNow(),
 });
 

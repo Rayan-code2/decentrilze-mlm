@@ -113,7 +113,7 @@ const RankRewards: React.FC<RankRewardsProps> = ({ user }) => {
 
   useEffect(() => {
     fetchRewardsAndBusiness();
-  }, [user]);
+  }, [user.id, user.user_id, user.role]);
 
   const getIcon = (type: string) => {
     switch (type) {

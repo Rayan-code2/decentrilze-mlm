@@ -50,13 +50,13 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
       
       setHistory(historyData || []);
 
-      // Auto-redirect if current tab is disabled
+      // Auto-redirect if current tab is disabled, only switch if the alternate is actually active to prevent ping-pong loop!
       const finalSettings = settingsData || await mockApi.db.getSettings();
       if (finalSettings) {
         const s = finalSettings as any;
-        if (activeTab === 'topup' && s.enable_deposit === false) {
+        if (activeTab === 'topup' && s.enable_deposit === false && s.enable_withdrawal !== false) {
           setActiveTab('withdraw');
-        } else if (activeTab === 'withdraw' && s.enable_withdrawal === false) {
+        } else if (activeTab === 'withdraw' && s.enable_withdrawal === false && s.enable_deposit !== false) {
           setActiveTab('topup');
         }
       }

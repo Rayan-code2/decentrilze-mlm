@@ -81,8 +81,10 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
           matLevels[i] = [];
         }
 
+        const visitedGenerations = new Set<string>();
         const findGenerationalDownline = (parentId: string, currentLevel: number) => {
-          if (currentLevel > 10 || !parentId) return;
+          if (currentLevel > 10 || !parentId || visitedGenerations.has(parentId)) return;
+          visitedGenerations.add(parentId);
           const children = usersWithPkgs.filter(u => {
             const rid = u.referred_by || (u as any).referrer_id || (u as any).sponsor_id;
             return rid === parentId || (u as any).referred_by === parentId;
@@ -97,8 +99,10 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
           }
         };
 
+        const visitedMatrix = new Set<string>();
         const findMatrixDownline = (parentId: string, currentLevel: number) => {
-          if (currentLevel > 10 || !parentId) return;
+          if (currentLevel > 10 || !parentId || visitedMatrix.has(parentId)) return;
+          visitedMatrix.add(parentId);
           const children = usersWithPkgs.filter(u => (u as any).matrix_parent_id === parentId);
           if (children.length > 0) {
             matLevels[currentLevel].push(...children);

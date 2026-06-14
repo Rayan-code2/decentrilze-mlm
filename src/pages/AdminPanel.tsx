@@ -115,7 +115,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
       });
     }
     fetchData();
-  }, [user]);
+  }, [user.id, user.user_id, user.role]);
 
   useEffect(() => {
     const fetchUserWallet = async () => {

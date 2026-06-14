@@ -95,14 +95,14 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ user }) => {
           <div className="glass-card p-8 border-white/5 bg-white/[0.02] flex flex-col items-center gap-4 animate-in slide-in-from-bottom-8 duration-700 delay-100">
             <div className="relative">
               <div className="w-20 h-20 rounded-full bg-slate-800 border-2 border-slate-300/30 flex items-center justify-center text-2xl font-black text-white">
-                {topUsers[1].name[0]}
+                {(topUsers[1].name || topUsers[1].email || '?').charAt(0).toUpperCase()}
               </div>
               <div className="absolute -bottom-2 -right-2 p-2 rounded-full bg-slate-700 border border-slate-300 shadow-lg">
                 <Medal size={16} className="text-slate-300" />
               </div>
             </div>
             <div className="text-center">
-              <h4 className="text-lg font-black text-white italic tracking-tighter">{topUsers[1].name}</h4>
+              <h4 className="text-lg font-black text-white italic tracking-tighter">{topUsers[1].name || 'USER_NODE'}</h4>
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Rank #2</p>
             </div>
             <div className="w-full pt-4 border-t border-white/5 flex justify-between items-center">
@@ -120,14 +120,14 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ user }) => {
             </div>
             <div className="relative">
               <div className="w-28 h-28 rounded-full bg-cyan-900/30 border-4 border-cyan-400 flex items-center justify-center text-4xl font-black text-white shadow-[0_0_30px_rgba(0,229,255,0.3)]">
-                {topUsers[0].name[0]}
+                {(topUsers[0].name || topUsers[0].email || '?').charAt(0).toUpperCase()}
               </div>
               <div className="absolute -bottom-2 -right-2 p-3 rounded-full bg-cyan-500 shadow-lg">
                 <Zap size={20} className="text-white" />
               </div>
             </div>
             <div className="text-center">
-              <h4 className="text-2xl font-black text-white italic tracking-tighter">{topUsers[0].name}</h4>
+              <h4 className="text-2xl font-black text-white italic tracking-tighter">{topUsers[0].name || 'USER_NODE'}</h4>
               <p className="text-[12px] font-black text-cyan-400 uppercase tracking-[0.3em] mt-1">Global Champion</p>
             </div>
             <div className="w-full pt-6 border-t border-white/10 flex justify-between items-center">
@@ -142,14 +142,14 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ user }) => {
           <div className="glass-card p-8 border-white/5 bg-white/[0.02] flex flex-col items-center gap-4 animate-in slide-in-from-bottom-8 duration-700 delay-200">
             <div className="relative">
               <div className="w-20 h-20 rounded-full bg-slate-800 border-2 border-amber-600/30 flex items-center justify-center text-2xl font-black text-white">
-                {topUsers[2].name[0]}
+                {(topUsers[2].name || topUsers[2].email || '?').charAt(0).toUpperCase()}
               </div>
               <div className="absolute -bottom-2 -right-2 p-2 rounded-full bg-amber-900/50 border border-amber-600 shadow-lg">
                 <Medal size={16} className="text-amber-600" />
               </div>
             </div>
             <div className="text-center">
-              <h4 className="text-lg font-black text-white italic tracking-tighter">{topUsers[2].name}</h4>
+              <h4 className="text-lg font-black text-white italic tracking-tighter">{topUsers[2].name || 'USER_NODE'}</h4>
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Rank #3</p>
             </div>
             <div className="w-full pt-4 border-t border-white/5 flex justify-between items-center">
@@ -190,7 +190,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ user }) => {
                   <td className="p-6">
                     <div className="flex items-center gap-4">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-black text-white shadow-inner ${u.rank === 1 ? 'bg-cyan-500' : 'bg-slate-800'}`}>
-                        {u.name[0]}
+                        {(u.name || u.email || '?').charAt(0).toUpperCase()}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
