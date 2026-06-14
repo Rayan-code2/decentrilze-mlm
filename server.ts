@@ -76,19 +76,14 @@ function sanitizeUser(user: any) {
     return san;
 }
 
-// ✅ FIX: cleanErrorMessage - ab DB errors kabhi bhi frontend pe leak nahi honge
+// ✅ FIX: cleanErrorMessage - ab DB errors kabhi bhi frontend pe leak nahi honge, jabki setup/connection errors guide karenge user ko
 function cleanErrorMessage(err: any): string {
     if (!err) return 'An unexpected error occurred.';
 
-    // Drizzle ORM error nested levels check karo
-    const msg = (
-        err.message ||
-        err.detail ||
-        (err.cause && err.cause.message) ||
-        String(err)
-    );
+    // Server logs mein output for developer debugging
+    console.error('[Server Error Detail]:', err);
 
-    // Full error object JSON mein bhi check karo (Drizzle nested errors ke liye)
+    const msg = String(err.message || err.detail || (err.cause && err.cause.message) || err).trim();
     let fullErrStr = '';
     try {
         fullErrStr = JSON.stringify(err);
@@ -96,23 +91,80 @@ function cleanErrorMessage(err: any): string {
         fullErrStr = String(err);
     }
 
-    // Server logs mein pura error print karo (debug ke liye)
-    console.error('[Server Error Detail]:', err);
+    const combinedLower = (msg + ' ' + fullErrStr).toLowerCase();
 
-    // DB related keywords - agar koi bhi match kare toh generic message return karo
-    const dbKeywords = [
-        'FAILED QUERY', 'SELECT', 'INSERT', 'UPDATE', 'DELETE',
-        'PARAMS:', 'relation', 'column', 'null value', 'db:',
-        'postgres', 'drizzle', 'syntax error', 'violates',
-        'duplicate key', 'foreign key', 'constraint', 'pg_',
-        'ERROR:', 'DETAIL:', 'HINT:', 'WHERE', 'FROM',
+    // 1. Connection refused
+    if (combinedLower.includes('econnrefused')) {
+        return 'Database Connection Error: Connection refused. Check if PostgreSQL server is running and port 5432 is open.';
+    }
+
+    // 2. Authentication failed
+    if (combinedLower.includes('authentication failed') || combinedLower.includes('password authentication failed')) {
+        return 'Database Authentication Error: Please verify the SQL_USER and SQL_PASSWORD details in your .env file.';
+    }
+
+    // 3. Database not found
+    if (combinedLower.includes('does not exist') && combinedLower.includes('database "')) {
+        const dbMatch = msg.match(/database\s+"([^"]+)"\s+does\s+not\s+exist/i);
+        const dbName = dbMatch ? dbMatch[1] : 'specified database';
+        return `Database Error: Database "${dbName}" does not exist in your PostgreSQL server. Please create it.`;
+    }
+
+    // 4. Host resolution failure
+    if (combinedLower.includes('enotfound') || combinedLower.includes('getaddrinfo')) {
+        return 'Database Connection Error: Host address in SQL_HOST could not be resolved (ENOTFOUND).';
+    }
+
+    // 5. Connection timeout
+    if (combinedLower.includes('timeout') || combinedLower.includes('pool-timeout') || combinedLower.includes('connection timeout')) {
+        return 'Database Connection Error: Query or connection timed out. Check network or firewall settings.';
+    }
+
+    // 6. Table/Relation does not exist
+    if (combinedLower.includes('does not exist') && (combinedLower.includes('relation "') || combinedLower.includes('table '))) {
+        const relationMatch = msg.match(/relation\s+"([^"]+)"\s+does\s+not\s+exist/i);
+        const tableName = relationMatch ? relationMatch[1] : 'required table';
+        return `Database Schema Error: Table "${tableName}" does not exist. Please restart the server or run self-heal to create it.`;
+    }
+
+    // 7. Column does not exist
+    if (combinedLower.includes('does not exist') && combinedLower.includes('column "')) {
+        const colMatch = msg.match(/column\s+"([^"]+)"/i);
+        const colName = colMatch ? colMatch[1] : 'required column';
+        return `Database Schema Error: Column "${colName}" does not exist. Please restart the server or run self-heal to apply database updates.`;
+    }
+
+    // 8. violates unique constraint
+    if (combinedLower.includes('violates unique constraint') || combinedLower.includes('duplicate key')) {
+        if (combinedLower.includes('email')) {
+            return 'Email is already registered.';
+        }
+        if (combinedLower.includes('mobile')) {
+            return 'Mobile number is already registered.';
+        }
+        if (combinedLower.includes('uid')) {
+            return 'User ID is already registered.';
+        }
+        return 'Duplicate Error: A record with this unique value already exists.';
+    }
+
+    // 9. violates not-null constraint
+    if (combinedLower.includes('violates not-null constraint') || combinedLower.includes('null value')) {
+        const colMatch = msg.match(/column\s+"([^"]+)"/i);
+        const colName = colMatch ? colMatch[1] : 'required';
+        return `Database Error: Required field "${colName}" is missing or null.`;
+    }
+
+    // 10. Check for ANY raw SQL queries or sensitive details (to hide SQL Injection leaks completely)
+    const sqlPatterns = [
+        'select ', 'insert ', 'update ', 'delete ', 'create table', 'alter table',
+        'where ', 'from ', 'join ', 'limit ', 'params:', 'drizzle', 'failed query',
+        'sqlselect', 'sqlinsert', 'sqlupdate', 'sqldelete'
     ];
 
-    const combinedStr = msg + fullErrStr;
-    const isDbError = dbKeywords.some(keyword => combinedStr.includes(keyword));
-
-    if (isDbError) {
-        return 'Server error occurred. Please try again or contact support.';
+    const containsRawSql = sqlPatterns.some(pattern => combinedLower.includes(pattern));
+    if (containsRawSql) {
+        return 'Database execution error occurred. SQL queries and details have been filtered for security. Please check the server console logs.';
     }
 
     // Safe user-facing messages
@@ -124,7 +176,7 @@ function cleanErrorMessage(err: any): string {
         'Please activate', 'balance', 'Password',
     ];
 
-    const isSafe = safeMessages.some(s => msg.includes(s));
+    const isSafe = safeMessages.some(s => msg.toLowerCase().includes(s.toLowerCase()));
     if (isSafe) return msg;
 
     return 'An unexpected server error occurred. Please try again.';
