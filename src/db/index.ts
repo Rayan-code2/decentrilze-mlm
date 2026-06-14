@@ -1,6 +1,29 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema.ts';
+import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
+
+// Ensure environment variables are loaded immediately before creating the pool
+const loadEnv = () => {
+  const envPaths = [
+    path.resolve(process.cwd(), '.env'),
+    path.join(process.cwd(), '../.env'),
+    path.join(process.cwd(), '../../.env'),
+  ];
+  for (const envPath of envPaths) {
+    try {
+      if (fs.existsSync(envPath)) {
+        dotenv.config({ path: envPath, override: true });
+        console.log(`[Database Init] Loaded .env from: ${envPath}`);
+        break;
+      }
+    } catch (err) {}
+  }
+};
+
+loadEnv();
 
 export const createPool = () => {
   const connectionString = process.env.DATABASE_URL || process.env.SQL_DATABASE_URL;
@@ -15,12 +38,12 @@ export const createPool = () => {
     });
   }
 
-  const host = process.env.SQL_HOST || 'localhost';
-  const user = process.env.SQL_USER || 'postgres';
-  const password = process.env.SQL_PASSWORD || '';
-  const database = process.env.SQL_DB_NAME || 'cryptospiral';
+  const host = String(process.env.SQL_HOST || 'localhost');
+  const user = String(process.env.SQL_USER || 'postgres');
+  const password = String(process.env.SQL_PASSWORD || '');
+  const database = String(process.env.SQL_DB_NAME || 'cryptospiral');
 
-  console.log(`[Database] Connecting to ${host}/${database} as ${user}...`);
+  console.log(`[Database] Connecting to ${host}/${database} as ${user} (password status: ${password ? 'PROVIDED' : 'EMPTY'})...`);
 
   return new Pool({
     host,

@@ -162,10 +162,11 @@ function cleanErrorMessage(err: any): string {
         'sqlselect', 'sqlinsert', 'sqlupdate', 'sqldelete'
     ];
 
-    const containsRawSql = sqlPatterns.some(pattern => combinedLower.includes(pattern));
-    if (containsRawSql) {
-        return 'Database execution error occurred. SQL queries and details have been filtered for security. Please check the server console logs.';
-    }
+    // Temporarily disabled SQL filtering to see the exact error on the page
+    // const containsRawSql = sqlPatterns.some(pattern => combinedLower.includes(pattern));
+    // if (containsRawSql) {
+    //     return 'Database execution error occurred. SQL queries and details have been filtered for security. Please check the server console logs.';
+    // }
 
     // Safe user-facing messages
     const safeMessages = [
