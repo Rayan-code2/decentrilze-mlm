@@ -149,7 +149,7 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
         : address;
 
       const res = await api.createExchangerRequest({
-        user_id: user.user_id || user.id || (user as any).$id,
+        user_id: user.id || user.user_id || (user as any).uid || (user as any).$id || '',
         amount: Number(amount),
         type: requestType,
         utr_number: utr || '',

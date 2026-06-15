@@ -935,7 +935,7 @@ app.post('/api/admin/delete-user', verifyAdmin, async (req: any, res: any) => {
 // Exchanger Request
 app.post('/api/exchanger/request', verifyAuth, async (req: any, res: any) => {
     const body = req.body || {};
-    const userId = req.user?.uid || body.userId || body.user_id;
+    const userId = req.user?.uid || req.user?.id || body.userId || body.user_id || body.user?.uid || body.user?.id;
     const amount = body.amount;
     const type = body.type;
     const address = body.address;
@@ -944,30 +944,81 @@ app.post('/api/exchanger/request', verifyAuth, async (req: any, res: any) => {
     const inrAmount = body.inrAmount || body.inr_amount;
     const rate = body.rate;
 
+    console.log("[Exchanger Request API Call LOG]", {
+        authorizationHeader: req.headers.authorization,
+        authenticatedUser: req.user,
+        reqBody: body,
+        extractedUserId: userId,
+        amount,
+        type,
+        address,
+        network,
+        utrNumber
+    });
+
     try {
         if (!userId) {
-            return res.status(400).json({ success: false, message: 'Required parameter: userId is missing.' });
+            return res.status(400).json({ success: false, message: 'Identity verification failed. Missing user Reference.' });
         }
+        if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+            return res.status(400).json({ success: false, message: 'Invalid transaction volume/amount.' });
+        }
+
         const resolvedId = await resolveUserAuthId(userId) || userId;
-        const fees = type === 'withdraw' ? 5.0 : 0.0;
-        if (type === 'withdraw') {
+        if (!resolvedId) {
+            return res.status(400).json({ success: false, message: 'System could not register user block resolution.' });
+        }
+
+        // Verify user exists in the registry
+        const userMatches = await db.select().from(users).where(eq(users.uid, resolvedId)).limit(1);
+        if (userMatches.length === 0) {
+            return res.status(400).json({ success: false, message: `Node user matching identification '${resolvedId}' not registered.` });
+        }
+
+        const cleanType = String(type || 'deposit').toLowerCase() === 'withdraw' ? 'withdraw' : 'deposit';
+        const fees = cleanType === 'withdraw' ? 5.0 : 0.0;
+
+        if (cleanType === 'withdraw') {
             const wallet = await fetchWallet(resolvedId);
             if (!wallet || Number(wallet.balance) < (Number(amount) + fees)) {
                 return res.json({ success: false, message: 'Insufficient wallet balance for withdrawal processing' });
+            }
+            if (!address || !address.trim()) {
+                return res.status(400).json({ success: false, message: 'Destination settlement address is required for withdrawal.' });
             }
             await db.update(wallets).set({
                 balance: sql`${wallets.balance} - ${(Number(amount) + fees)}`,
                 holdBalance: sql`${wallets.holdBalance} + ${Number(amount)}`
             }).where(eq(wallets.userId, resolvedId));
+        } else {
+            // For deposits, ensure a reference UTR or HASH is provided
+            if (!utrNumber || !utrNumber.trim()) {
+                return res.status(400).json({ success: false, message: 'Transaction reference (UTR/HASH) is required for system sync.' });
+            }
         }
+
+        const cleanAddress = String(address || '').trim();
+        const cleanNetwork = String(network || 'TRC20').trim();
+        const cleanUtrNumber = String(utrNumber || '').trim();
+        const cleanInrAmount = inrAmount ? Number(inrAmount) : null;
+        const cleanRate = rate ? Number(rate) : null;
+
         await db.insert(exchangerRequests).values({
-            userId: resolvedId, amount: Number(amount), type, status: 'pending',
-            address: address || '', network: network || '', utrNumber: utrNumber || '',
-            inrAmount: inrAmount ? Number(inrAmount) : null,
-            rate: rate ? Number(rate) : null, fee: fees,
+            userId: resolvedId,
+            amount: Number(amount),
+            type: cleanType,
+            status: 'pending',
+            address: cleanAddress,
+            network: cleanNetwork,
+            utrNumber: cleanUtrNumber,
+            inrAmount: cleanInrAmount,
+            rate: cleanRate,
+            fee: fees,
         });
+
         res.json({ success: true, message: 'Exchanger request queued successfully.' });
     } catch (err: any) {
+        console.error("[Exchanger Request API Error]", err);
         res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
