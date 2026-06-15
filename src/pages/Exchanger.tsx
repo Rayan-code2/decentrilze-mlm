@@ -316,7 +316,7 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
           <div className="space-y-3">
             <div className="flex justify-between items-center ml-2 sm:ml-4 mr-2 sm:mr-4">
               <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.4em]" htmlFor="withdraw-amount">Off-load Vol</label>
-              <span className="text-[7px] sm:text-[8px] font-black text-slate-600 uppercase tracking-widest">Cap: ${wallet.balance.toFixed(2)}</span>
+              <span className="text-[7px] sm:text-[8px] font-black text-slate-600 uppercase tracking-widest">Cap: ${Number(wallet?.balance || 0).toFixed(2)}</span>
             </div>
             <div className="relative group/input">
               <div className="absolute inset-x-4 inset-y-1 bg-red-500/10 blur opacity-0 group-focus-within/input:opacity-100 transition duration-500"></div>
@@ -402,7 +402,7 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
             <div className="space-y-0.5 sm:space-y-1">
               <p className="text-[7px] sm:text-[8px] font-black text-slate-500 uppercase tracking-widest">Vault Available</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-black text-white italic tracking-tighter">${wallet.balance.toFixed(2)}</span>
+                <span className="text-2xl sm:text-3xl font-black text-white italic tracking-tighter">${Number(wallet?.balance || 0).toFixed(2)}</span>
                 <span className="text-[10px] font-black text-electric/60 uppercase">USDT</span>
               </div>
             </div>
@@ -565,7 +565,7 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
                     
                     <div className="space-y-1">
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl font-black text-white italic tracking-tighter leading-none">${req.amount.toFixed(2)}</span>
+                        <span className="text-2xl font-black text-white italic tracking-tighter leading-none">${Number(req.amount || 0).toFixed(2)}</span>
                         <span className={`text-[7px] font-black uppercase px-3 py-1 rounded-full border tracking-widest ${
                           req.status === 'approved' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 
                           req.status === 'rejected' ? 'bg-red-500/10 border-red-500/30 text-red-400' : 
