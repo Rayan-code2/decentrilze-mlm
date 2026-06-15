@@ -114,8 +114,8 @@ const IncomeDetails: React.FC<IncomeDetailsProps> = ({ user, wallet }) => {
     };
   }, [transactions, wallet]);
 
-  const handleCopy = (id: string) => {
-    navigator.clipboard.writeText(id);
+  const handleCopy = (id: any) => {
+    navigator.clipboard.writeText(String(id));
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
@@ -208,7 +208,7 @@ const IncomeDetails: React.FC<IncomeDetailsProps> = ({ user, wallet }) => {
                   <tr key={tx.id} className="hover:bg-white/5 transition-colors group">
                     <td className="p-6">
                       <div className="flex items-center gap-3">
-                        <span className="font-mono text-[10px] text-electric uppercase tracking-tighter">0x{tx.id.toUpperCase().slice(0, 14)}...</span>
+                        <span className="font-mono text-[10px] text-electric uppercase tracking-tighter">0x{String(tx.id).toUpperCase().slice(0, 14)}...</span>
                         <button 
                           onClick={() => handleCopy(tx.id)}
                           className="opacity-0 group-hover:opacity-100 text-slate-muted hover:text-electric transition-all"
@@ -259,7 +259,7 @@ const IncomeDetails: React.FC<IncomeDetailsProps> = ({ user, wallet }) => {
                       </div>
                     </td>
                     <td className="p-6">
-                      <span className="text-[10px] font-black text-slate-muted uppercase tracking-widest">{new Date(tx.created_at).toLocaleDateString()}</span>
+                      <span className="text-[10px] font-black text-slate-muted uppercase tracking-widest">{new Date((tx as any).createdAt || tx.created_at || Date.now()).toLocaleDateString()}</span>
                     </td>
                     <td className="p-6 text-right">
                       <div className="flex justify-end">

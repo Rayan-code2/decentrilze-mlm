@@ -576,7 +576,7 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
                       </div>
                       <div className="flex items-center gap-3">
                         <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">
-                          {new Date(req.created_at).toLocaleDateString()} at {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {new Date((req as any).createdAt || req.created_at || Date.now()).toLocaleDateString()} at {new Date((req as any).createdAt || req.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </p>
                         {req.network && (
                           <>
@@ -595,7 +595,7 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
                     </div>
                     <div className="text-right">
                       <p className="text-[7px] font-black text-slate-700 uppercase tracking-widest mb-1">Reference ID</p>
-                      <p className="text-[10px] font-mono font-bold text-white select-all tracking-widest uppercase transition-colors group-hover:text-electric">{req.id.slice(-8)}</p>
+                      <p className="text-[10px] font-mono font-bold text-white select-all tracking-widest uppercase transition-colors group-hover:text-electric">{String(req.id).slice(-8)}</p>
                     </div>
                   </div>
                 </div>
