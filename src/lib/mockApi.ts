@@ -424,7 +424,7 @@ export const mockApi = {
       localStorage.setItem('spiral_settings', JSON.stringify(settings));
       return { success: true, message: 'Settings saved to local storage' };
     },
-    updateUser: async (userId: string, data: { name?: string, password?: string, personal_business?: number, team_business?: number, mobile?: string }) => {
+    updateUser: async (userId: string, data: { name?: string, password?: string, personal_business?: number, team_business?: number, mobile?: string, role?: string }) => {
       const users = await mockApi.db.getAllUsers();
       const index = users.findIndex(u => u.id === userId);
       if (index === -1) return { success: false, message: 'User not found' };
@@ -433,6 +433,7 @@ export const mockApi = {
       if (data.mobile !== undefined) users[index].mobile = data.mobile;
       if (data.personal_business !== undefined) users[index].personal_business = data.personal_business;
       if (data.team_business !== undefined) users[index].team_business = data.team_business;
+      if (data.role !== undefined) users[index].role = data.role as any;
       // In mock, resetting password just means updating the user object if we were tracking it
       // Since we don't track passwords in localStorage mock, we just say success.
 

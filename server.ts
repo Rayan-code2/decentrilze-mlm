@@ -910,6 +910,7 @@ app.post('/api/admin/update-user', verifyAdmin, async (req: any, res: any) => {
         if (data.personal_business !== undefined) payload.personalBusiness = Number(data.personal_business);
         if (data.team_business !== undefined) payload.teamBusiness = Number(data.team_business);
         if (data.isBlocked !== undefined) payload.isBlocked = !!data.isBlocked;
+        if (data.role !== undefined) payload.role = data.role;
         await db.update(users).set(payload).where(eq(users.uid, resolvedId));
         res.json({ success: true, message: 'User updated successfully' });
     } catch (err: any) {

@@ -259,6 +259,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
     const newName = formData.get('userName') as string;
     const newPassword = formData.get('userPassword') as string;
     const mobile = formData.get('userMobile') as string;
+    const newRole = formData.get('userRole') as string;
     const personalBusiness = formData.get('personalBusiness') ? Number(formData.get('personalBusiness')) : undefined;
     const teamBusiness = formData.get('teamBusiness') ? Number(formData.get('teamBusiness')) : undefined;
     const walletBalanceRaw = formData.get('userWalletBalance');
@@ -273,7 +274,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
         password: newPassword || undefined,
         personal_business: personalBusiness,
         team_business: teamBusiness,
-        mobile: mobile
+        mobile: mobile,
+        role: newRole
       });
 
       if (res.success && walletBalance !== undefined && !isNaN(walletBalance)) {
@@ -2138,6 +2140,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                   className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:border-emerald-500/50 outline-none transition-colors"
                   placeholder="Enter mobile number"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-2">User Role (Admin status)</label>
+                <select 
+                  name="userRole"
+                  defaultValue={editingUser.role || 'user'}
+                  className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:border-emerald-500/50 outline-none transition-colors"
+                >
+                  <option value="user" className="bg-slate-900 text-white">User (Standard)</option>
+                  <option value="admin" className="bg-slate-900 text-white">Admin (Full Control)</option>
+                </select>
               </div>
 
               <div className="space-y-2">
