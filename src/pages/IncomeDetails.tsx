@@ -259,7 +259,18 @@ const IncomeDetails: React.FC<IncomeDetailsProps> = ({ user, wallet }) => {
                       </div>
                     </td>
                     <td className="p-6">
-                      <span className="text-[10px] font-black text-slate-muted uppercase tracking-widest">{new Date((tx as any).createdAt || tx.created_at || Date.now()).toLocaleDateString()}</span>
+                      <span className="text-[10px] font-black text-slate-muted uppercase tracking-widest">
+                        {(() => {
+                          const dt = (tx as any).createdAt || tx.created_at;
+                          if (!dt) return 'N/A';
+                          try {
+                            const d = new Date(dt);
+                            return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
+                          } catch {
+                            return 'N/A';
+                          }
+                        })()}
+                      </span>
                     </td>
                     <td className="p-6 text-right">
                       <div className="flex justify-end">

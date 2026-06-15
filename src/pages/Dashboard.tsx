@@ -1510,7 +1510,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                   <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">No protocol activity detected</p>
                 </div>
               ) : (
-                [...transactions].sort((a,b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()).map((tx) => (
+                [...transactions].sort((a,b) => new Date(b.createdAt || b.created_at || Date.now()).getTime() - new Date(a.createdAt || a.created_at || Date.now()).getTime()).map((tx) => (
                   <div key={tx.id} className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5 group/activity hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-all duration-300">
                     <div className="flex items-center gap-3">
                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center group-hover/activity:scale-110 transition-transform ${
@@ -1536,10 +1536,28 @@ const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                     <div className="text-right">
                       <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block">
-                        {tx.created_at ? new Date(tx.created_at).toLocaleDateString() : 'N/A'}
+                        {(() => {
+                          const dt = tx.createdAt || tx.created_at;
+                          if (!dt) return 'N/A';
+                          try {
+                            const d = new Date(dt);
+                            return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
+                          } catch {
+                            return 'N/A';
+                          }
+                        })()}
                       </span>
                       <span className="text-[7px] font-bold text-slate-700 uppercase block tracking-tighter">
-                        {tx.created_at ? new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                        {(() => {
+                          const dt = tx.createdAt || tx.created_at;
+                          if (!dt) return '';
+                          try {
+                            const d = new Date(dt);
+                            return isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                          } catch {
+                            return '';
+                          }
+                        })()}
                       </span>
                     </div>
                   </div>

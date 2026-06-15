@@ -30,6 +30,28 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
   const [copied, setCopied] = useState<string | null>(null);
   const [history, setHistory] = useState<ExchangerRequest[]>([]);
 
+  const safeFormatDate = (rawDate: any): string => {
+    try {
+      if (!rawDate) return 'Pending Sync';
+      const d = new Date(rawDate);
+      if (isNaN(d.getTime())) return 'Pending Sync';
+      return d.toLocaleDateString();
+    } catch {
+      return 'Pending Sync';
+    }
+  };
+
+  const safeFormatTime = (rawDate: any): string => {
+    try {
+      if (!rawDate) return '';
+      const d = new Date(rawDate);
+      if (isNaN(d.getTime())) return '';
+      return ' at ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  };
+
   const fetchData = async () => {
     try {
       const isLive = isAppwriteConfigured();
@@ -576,7 +598,7 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
                       </div>
                       <div className="flex items-center gap-3">
                         <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">
-                          {new Date((req as any).createdAt || req.created_at || Date.now()).toLocaleDateString()} at {new Date((req as any).createdAt || req.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {safeFormatDate((req as any).createdAt || req.created_at || Date.now())}{safeFormatTime((req as any).createdAt || req.created_at || Date.now())}
                         </p>
                         {req.network && (
                           <>
