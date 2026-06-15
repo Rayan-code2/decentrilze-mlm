@@ -935,7 +935,7 @@ app.post('/api/admin/delete-user', verifyAdmin, async (req: any, res: any) => {
 // Exchanger Request
 app.post('/api/exchanger/request', verifyAuth, async (req: any, res: any) => {
     const body = req.body || {};
-    const userId = body.userId || body.user_id;
+    const userId = req.user?.uid || body.userId || body.user_id;
     const amount = body.amount;
     const type = body.type;
     const address = body.address;
