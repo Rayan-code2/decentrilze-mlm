@@ -74,7 +74,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ user }) => {
             </div>
             <div>
               <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Elite Leaderboard</h2>
-              <p className="text-slate-400 text-xs mt-1">Top 10 Nodes dominating the Decentralized Protocol.</p>
+              <p className="text-slate-400 text-xs mt-1">Top 10 Nodes dominating Cryptospiral.</p>
             </div>
           </div>
           <div className="flex items-center gap-4 bg-white/5 px-6 py-4 rounded-3xl border border-white/10 backdrop-blur-md">

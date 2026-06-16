@@ -1,5 +1,5 @@
 export const BRAND_CONFIG = {
-  name: "Decentralized Protocol",
-  shortName: "Protocol",
+  name: "Cryptospiral",
+  shortName: "Cryptospiral",
   description: "Next-gen Decentralized MLM Protocol",
 };
