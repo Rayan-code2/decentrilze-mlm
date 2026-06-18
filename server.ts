@@ -583,17 +583,27 @@ app.post('/api/admin/save-package', verifyAdmin, async (req: any, res: any) => {
         console.log("[ADMIN_SAVE_PACKAGE] Incoming pkg:", JSON.stringify(pkg));
         
         // Robust payload parser supporting both camelCase and snake_case values
+        // Prioritize snake_case values as they are the ones modified by the Admin Panel form,
+        // falling back to camelCase.
         const payload = {
             name: pkg.name || 'Custom Package',
             price: Number(pkg.price !== undefined ? pkg.price : 0),
-            dailyRoi: Number(pkg.dailyRoi !== undefined ? pkg.dailyRoi : (pkg.daily_roi !== undefined ? pkg.daily_roi : 0)),
-            roiIntervalMinutes: parseInt(pkg.roiIntervalMinutes !== undefined ? pkg.roiIntervalMinutes : (pkg.roi_interval_minutes !== undefined ? pkg.roi_interval_minutes : 1440), 10),
-            durationDays: parseInt(pkg.durationDays !== undefined ? pkg.durationDays : (pkg.duration_days !== undefined ? pkg.duration_days : 365), 10),
-            maxRoiPercent: Number(pkg.maxRoiPercent !== undefined ? pkg.maxRoiPercent : (pkg.max_roi_percent !== undefined ? pkg.max_roi_percent : 200)),
-            directIncomePercent: Number(pkg.directIncomePercent !== undefined ? pkg.directIncomePercent : (pkg.direct_income_percent !== undefined ? pkg.direct_income_percent : 0)),
-            matrixIncomePercent: Number(pkg.matrixIncomePercent !== undefined ? pkg.matrix_income_percent : (pkg.matrix_income_percent !== undefined ? pkg.matrix_income_percent : 0)),
-            levelIncomePercents: typeof pkg.level_income_percents === 'string' ? pkg.level_income_percents : (typeof pkg.levelIncomePercents === 'string' ? pkg.levelIncomePercents : JSON.stringify(pkg.level_income_percents || pkg.levelIncomePercents || [])),
-            isActive: pkg.isActive !== undefined ? pkg.isActive : (pkg.is_active !== undefined ? pkg.is_active : true)
+            dailyRoi: Number(pkg.daily_roi !== undefined ? pkg.daily_roi : (pkg.dailyRoi !== undefined ? pkg.dailyRoi : 0)),
+            roiIntervalMinutes: parseInt(pkg.roi_interval_minutes !== undefined ? pkg.roi_interval_minutes : (pkg.roiIntervalMinutes !== undefined ? pkg.roiIntervalMinutes : 1440), 10),
+            durationDays: parseInt(pkg.duration_days !== undefined ? pkg.duration_days : (pkg.durationDays !== undefined ? pkg.durationDays : 365), 10),
+            maxRoiPercent: Number(pkg.max_roi_percent !== undefined ? pkg.max_roi_percent : (pkg.maxRoiPercent !== undefined ? pkg.maxRoiPercent : 200)),
+            directIncomePercent: Number(pkg.direct_income_percent !== undefined ? pkg.direct_income_percent : (pkg.directIncomePercent !== undefined ? pkg.directIncomePercent : 0)),
+            matrixIncomePercent: Number(pkg.matrix_income_percent !== undefined ? pkg.matrix_income_percent : (pkg.matrixIncomePercent !== undefined ? pkg.matrixIncomePercent : 0)),
+            levelIncomePercents: Array.isArray(pkg.level_income_percents) 
+                ? JSON.stringify(pkg.level_income_percents)
+                : (typeof pkg.level_income_percents === 'string' 
+                    ? pkg.level_income_percents 
+                    : (Array.isArray(pkg.levelIncomePercents)
+                        ? JSON.stringify(pkg.levelIncomePercents)
+                        : (typeof pkg.levelIncomePercents === 'string'
+                            ? pkg.levelIncomePercents
+                            : JSON.stringify([])))),
+            isActive: pkg.is_active !== undefined ? pkg.is_active : (pkg.isActive !== undefined ? pkg.isActive : true)
         };
 
         console.log("[ADMIN_SAVE_PACKAGE] Formatted payload:", JSON.stringify(payload));
