@@ -711,19 +711,54 @@ export const mockApi = {
             downlineSamePkgCount = count;
         }
 
-        // Calculations for Personal Business
-        const personalBusiness20 = activePurchases.reduce((acc: number, p: any) => {
-            return acc + (Number(p.price) === 20 ? Number(p.price) : 0);
+        // Calculations for Personal Business (sum of all active personal packages of ANY price)
+        const realPersonalBusiness = activePurchases.reduce((acc: number, p: any) => {
+            return acc + (Number(p.price) || 0);
         }, 0);
 
-        // Team Business
-        let teamBusiness20 = 0;
-        if (downlineIds.length > 0) {
-            downlineIds.forEach((dId: string) => {
+        // Calculations for Team Business (sum of all active packages in target levels)
+        const targetDepth = Number(reward.target_depth || 0);
+        let realTeamBusiness = 0;
+        
+        const getDownlineIdsAtDepth = (uIds: string[], currentDepth: number, targetDepth: number): string[] => {
+            if (currentDepth === targetDepth) {
+                return uIds;
+            }
+            const nextLevelUIds: string[] = [];
+            allUsers.forEach((u: any) => {
+                const referee = String(u.referred_by || '').toLowerCase();
+                if (uIds.some(id => String(id).toLowerCase() === referee)) {
+                    const dId = u.user_id || u.id || u.$id;
+                    if (dId) {
+                        nextLevelUIds.push(dId);
+                    }
+                }
+            });
+            if (nextLevelUIds.length === 0) return [];
+            return getDownlineIdsAtDepth(nextLevelUIds, currentDepth + 1, targetDepth);
+        };
+
+        let targetDownlineIds: string[] = [];
+        if (targetDepth === 0) {
+            targetDownlineIds = downlineIds;
+        } else {
+            // Collect all downlines from level 1 up to level targetDepth
+            for (let d = 1; d <= targetDepth; d++) {
+                const levelIds = getDownlineIdsAtDepth([userId], 0, d);
+                levelIds.forEach(id => {
+                    if (!targetDownlineIds.includes(id)) {
+                        targetDownlineIds.push(id);
+                    }
+                });
+            }
+        }
+
+        if (targetDownlineIds.length > 0) {
+            targetDownlineIds.forEach((dId: string) => {
                const pList = JSON.parse(localStorage.getItem(`purchased_packages_${dId}`) || '[]');
                pList.forEach((p: any) => {
-                  if (p.is_active !== false && Number(p.price) === 20) {
-                     teamBusiness20 += 20;
+                  if (p.is_active !== false) {
+                      realTeamBusiness += Number(p.price) || 0;
                   }
                });
             });
@@ -745,11 +780,12 @@ export const mockApi = {
         if (downlineSamePkgCount < targetSamePkgDownlines) {
             return { success: false, message: `Only ${downlineSamePkgCount} of your downline upgraded to $${targetSelfPkg}+ package. Need ${targetSamePkgDownlines}.` };
         }
-        if (personalBusiness20 < targetPersonalBusiness) {
-            return { success: false, message: `Your personal business of $20 nodes is $${personalBusiness20}. Required: $${targetPersonalBusiness}.` };
+        if (realPersonalBusiness < targetPersonalBusiness) {
+            return { success: false, message: `Your personal business is $${realPersonalBusiness}. Required: $${targetPersonalBusiness}.` };
         }
-        if (teamBusiness20 < targetTeamBusiness) {
-            return { success: false, message: `Your team business of $20 nodes is $${teamBusiness20}. Required: $${targetTeamBusiness}.` };
+        if (realTeamBusiness < targetTeamBusiness) {
+            const depthLabel = targetDepth === 0 ? "across all levels" : `up to level ${targetDepth}`;
+            return { success: false, message: `Your team business (${depthLabel}) is $${realTeamBusiness}. Required: $${targetTeamBusiness}.` };
         }
 
         // Award

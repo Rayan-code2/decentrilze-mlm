@@ -23,6 +23,56 @@ const RankRewards: React.FC<RankRewardsProps> = ({ user }) => {
   const [claimedRewards, setClaimedRewards] = useState<string[]>([]);
   const [claimStatus, setClaimStatus] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
+  // States to keep raw downline structures for dynamic evaluation
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [allPurchases, setAllPurchases] = useState<any[]>([]);
+  const [downlineIds, setDownlineIds] = useState<string[]>([]);
+
+  // Helpers to calculate level/depth business dynamically
+  const getDownlineIdsAtDepth = (uIds: string[], currentDepth: number, targetDepth: number, rawUsersList?: any[]): string[] => {
+    const listToUse = rawUsersList || allUsers;
+    if (currentDepth === targetDepth) {
+      return uIds;
+    }
+    const nextLevelUIds: string[] = [];
+    listToUse.forEach((u: any) => {
+      const referee = String(u.referred_by || '').toLowerCase();
+      if (uIds.some(id => String(id).toLowerCase() === referee)) {
+        const dId = u.user_id || u.id || u.$id;
+        if (dId) {
+          nextLevelUIds.push(dId);
+        }
+      }
+    });
+    if (nextLevelUIds.length === 0) return [];
+    return getDownlineIdsAtDepth(nextLevelUIds, currentDepth + 1, targetDepth, listToUse);
+  };
+
+  const getTeamBusinessAtDepth = (targetDepth: number, rawUsers?: any[], rawPurchases?: any[], rawDownlines?: any[]): number => {
+    const usersListToUse = rawUsers || allUsers;
+    const purchasesListToUse = rawPurchases || allPurchases;
+    const downlinesToUse = rawDownlines || downlineIds;
+
+    if (targetDepth === 0) {
+      return purchasesListToUse.filter((p: any) => 
+        p.is_active !== false && downlinesToUse.includes(p.user_id)
+      ).reduce((acc: number, p: any) => acc + (Number(p.price) || 0), 0);
+    } else {
+      const targetIds: string[] = [];
+      for (let d = 1; d <= targetDepth; d++) {
+        const levelIds = getDownlineIdsAtDepth([user.user_id || user.id], 0, d, usersListToUse);
+        levelIds.forEach(id => {
+          if (!targetIds.includes(id)) {
+            targetIds.push(id);
+          }
+        });
+      }
+      return purchasesListToUse.filter((p: any) => 
+        p.is_active !== false && targetIds.includes(p.user_id)
+      ).reduce((acc: number, p: any) => acc + (Number(p.price) || 0), 0);
+    }
+  };
+
   const fetchRewardsAndBusiness = async () => {
     try {
       const isLive = isAppwriteConfigured();
@@ -33,10 +83,10 @@ const RankRewards: React.FC<RankRewardsProps> = ({ user }) => {
       const rankRewards: RankReward[] = settings?.rank_rewards || [];
       setRewards(rankRewards);
 
-      // 2. Fetch User Purchases to evaluate self package size
+      // 2. Fetch User Purchases to evaluate self package size and total personal business
       const purchases = await api.getUserPurchases?.(user.id) || [];
       const totalPersonalBusiness = purchases.reduce((acc: number, p: any) => {
-        return acc + (Number(p.price) === 20 ? Number(p.price) : 0);
+        return acc + (p.is_active !== false ? Number(p.price) : 0);
       }, 0);
       setPersonalBusiness(totalPersonalBusiness);
 
@@ -53,13 +103,15 @@ const RankRewards: React.FC<RankRewardsProps> = ({ user }) => {
       setClaimedRewards(claimedNames);
 
       // 4. Fetch Downline details (works for both live/mock modes)
-      const allUsers = await api.getAllUsers() || [];
-      const allPurchases = await api.getAllPurchases?.() || [];
+      const allUsersList = await api.getAllUsers() || [];
+      const allPurchasesList = await api.getAllPurchases?.() || [];
+      setAllUsers(allUsersList);
+      setAllPurchases(allPurchasesList);
 
       // Construct Complete Downline List recursively
       const getDownlineIds = (uId: string): string[] => {
           const list: string[] = [];
-          const directs = allUsers.filter((u: any) => {
+          const directs = allUsersList.filter((u: any) => {
               const referee = String(u.referred_by || '').toLowerCase();
               const lookup = String(uId).toLowerCase();
               return referee === lookup;
@@ -72,29 +124,27 @@ const RankRewards: React.FC<RankRewardsProps> = ({ user }) => {
           return list;
       };
 
-      const downlineIds = getDownlineIds(user.user_id || user.id);
+      const dlIds = getDownlineIds(user.user_id || user.id);
+      setDownlineIds(dlIds);
       
       // Count direct referrals
-      const directsList = allUsers.filter((u: any) => {
+      const directsList = allUsersList.filter((u: any) => {
           const referee = String(u.referred_by || '').toLowerCase();
           const lookup = String(user.user_id || user.id).toLowerCase();
           return referee === lookup;
       });
       setDirectCount(directsList.length);
 
-      // Team Business of $20 packages
-      let team20TotalDir = 0;
-      allPurchases.forEach((p: any) => {
-          if (p.is_active !== false && Number(p.price) === 20 && downlineIds.includes(p.user_id)) {
-              team20TotalDir += 20;
-          }
-      });
-      setTeamBusiness(team20TotalDir);
+      // Calculate Total/Cumulative Team Business (depth = 0)
+      const cumulativeTeamBusiness = allPurchasesList.filter((p: any) => 
+          p.is_active !== false && dlIds.includes(p.user_id)
+      ).reduce((acc: number, p: any) => acc + (Number(p.price) || 0), 0);
+      setTeamBusiness(cumulativeTeamBusiness);
 
       // Count of downlines having active package of a given price
       const pkgMap: Record<number, number> = {};
-      downlineIds.forEach((dId) => {
-          const userPurchases = allPurchases.filter((p: any) => p.user_id === dId && p.is_active !== false);
+      dlIds.forEach((dId) => {
+          const userPurchases = allPurchasesList.filter((p: any) => p.user_id === dId && p.is_active !== false);
           userPurchases.forEach((p: any) => {
               const price = Number(p.price) || 0;
               if (price > 0) {
@@ -140,7 +190,11 @@ const RankRewards: React.FC<RankRewardsProps> = ({ user }) => {
     const hasDownlineCount = downlineCountForThisPkg >= minDownlineCountRequired;
     const hasDirectCount = directCount >= minDirectsRequired;
     const hasPersonalBusiness = personalBusiness >= reward.personal_business;
-    const hasTeamBusiness = teamBusiness >= reward.team_business;
+    
+    // Dynamic Level Team Business check
+    const targetDepth = Number(reward.target_depth || 0);
+    const calculatedTeamBiz = getTeamBusinessAtDepth(targetDepth);
+    const hasTeamBusiness = calculatedTeamBiz >= reward.team_business;
 
     if (hasSelfPkg && hasDownlineCount && hasDirectCount && hasPersonalBusiness && hasTeamBusiness) {
       return 'unlocked';
@@ -204,11 +258,11 @@ const RankRewards: React.FC<RankRewardsProps> = ({ user }) => {
               <p className="text-base font-black text-[#ccff00] italic tracking-tighter">{directCount} Directs</p>
             </div>
             <div className="bg-white/5 px-4 py-3 rounded-2xl border border-white/10 backdrop-blur-md">
-              <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1"> scaling Biz ($20)</p>
+              <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Personal Business</p>
               <p className="text-base font-black text-white italic tracking-tighter">${personalBusiness}</p>
             </div>
             <div className="bg-white/5 px-4 py-3 rounded-2xl border border-white/10 backdrop-blur-md">
-              <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Team Scaling Nodes</p>
+              <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Total Team Business</p>
               <p className="text-base font-black text-cyan-400 italic tracking-tighter">${teamBusiness}</p>
             </div>
           </div>
@@ -241,10 +295,14 @@ const RankRewards: React.FC<RankRewardsProps> = ({ user }) => {
           const metDownlines = currentDownlinesSamePkg >= requiredDownlineSamePkg;
           const metDirects = directCount >= requiredDirects;
           const metPersonalBusiness = personalBusiness >= item.personal_business;
-          const metTeamBusiness = teamBusiness >= item.team_business;
+          
+          // Count team business dynamically based on admin target depth
+          const targetDepth = Number(item.target_depth || 0);
+          const currentTeamBusiness = getTeamBusinessAtDepth(targetDepth);
+          const metTeamBusiness = currentTeamBusiness >= item.team_business;
           
           const personalProgress = Math.min(100, (personalBusiness / (item.personal_business || 1)) * 100);
-          const teamProgress = Math.min(100, (teamBusiness / (item.team_business || 1)) * 100);
+          const teamProgress = Math.min(100, (currentTeamBusiness / (item.team_business || 1)) * 100);
 
           return (
             <div 
@@ -286,6 +344,10 @@ const RankRewards: React.FC<RankRewardsProps> = ({ user }) => {
                   <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">{item.rank_name}</h3>
                   <div className="flex flex-col gap-1">
                     <p className="text-[11px] font-black text-[#ccff00] uppercase tracking-widest">Reward: ${item.reward_amount} USDT</p>
+                    {/* Level counting info badges */}
+                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">
+                      Count depth: <span className="text-cyan-400">{targetDepth === 0 ? "All Levels" : `Levels 1 to ${targetDepth}`}</span>
+                    </p>
                   </div>
                 </div>
 
@@ -330,7 +392,7 @@ const RankRewards: React.FC<RankRewardsProps> = ({ user }) => {
                   {item.personal_business > 0 && (
                     <div className="space-y-1 pt-1">
                       <div className="flex justify-between items-center text-[10px] font-mono">
-                        <span className="text-slate-400">Personal Business ($20 Nodes)</span>
+                        <span className="text-slate-400">Personal Business</span>
                         <span className={`font-black flex items-center gap-1 ${metPersonalBusiness ? 'text-emerald-400' : 'text-red-400'}`}>
                           ${personalBusiness} / ${item.personal_business}
                         </span>
@@ -345,13 +407,15 @@ const RankRewards: React.FC<RankRewardsProps> = ({ user }) => {
                   {item.team_business > 0 && (
                     <div className="space-y-1 pt-1">
                       <div className="flex justify-between items-center text-[10px] font-mono">
-                        <span className="text-slate-400 font-mono">Team Business ($20 Nodes)</span>
-                        <span className={`font-black flex items-center gap-1 ${metTeamBusiness ? 'text-emerald-400' : 'text-red-400'}`}>
-                          ${teamBusiness} / ${item.team_business}
+                        <span className="text-slate-400 font-mono">
+                          Team Biz ({targetDepth === 0 ? "All Levels" : `Levels 1-${targetDepth}`})
+                        </span>
+                        <span className={`font-black flex items-center gap-1 ${metTeamBusiness ? 'text-[#ccff00]' : 'text-red-400'}`}>
+                          ${currentTeamBusiness} / ${item.team_business}
                         </span>
                       </div>
                       <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                        <div className={`h-full ${metTeamBusiness ? 'bg-cyan-400' : 'bg-red-400'}`} style={{ width: `${teamProgress}%` }}></div>
+                        <div className={`h-full ${metTeamBusiness ? 'bg-[#ccff00]' : 'bg-red-400'}`} style={{ width: `${teamProgress}%` }}></div>
                       </div>
                     </div>
                   )}
@@ -384,7 +448,7 @@ const RankRewards: React.FC<RankRewardsProps> = ({ user }) => {
         <div className="flex-1">
           <h4 className="text-white font-black text-sm italic uppercase tracking-tighter mb-1">Rank Advancement eligibility guide</h4>
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-relaxed">
-            Eligible users can claim instant bonuses. Administrators configure minimum active packages to prevent low-value entry spoofing while evaluating the entire direct registration list and deep downline upgrades.
+            Eligible users can claim instant bonuses. Administrators configure minimum active packages to prevent low-value entry spoofing while evaluating the team business volume counted up to the specified level depth level.
           </p>
         </div>
       </div>
