@@ -481,7 +481,7 @@ app.get('/api/user/wallet/:userId', verifyAuth, async (req: any, res: any) => {
             }).returning();
             userWallet = created[0];
         }
-        res.json({ success: true, wallet: userWallet });
+        res.json({ success: true, wallet: normalizeWallet(userWallet) });
     } catch (err: any) {
         res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
@@ -558,6 +558,44 @@ function normalizePurchase(p: any) {
         isActive: p.isActive !== undefined ? p.isActive : p.is_active,
         activatedAt: p.activatedAt !== undefined ? p.activatedAt : p.activated_at,
         lastPaidAt: p.lastPaidAt !== undefined ? p.lastPaidAt : p.last_paid_at
+    };
+}
+
+function normalizeWallet(w: any) {
+    if (!w) return w;
+    return {
+        ...w,
+        user_id: w.userId !== undefined ? w.userId : w.user_id,
+        total_earned: w.totalEarned !== undefined ? w.totalEarned : w.total_earned,
+        total_withdrawn: w.totalWithdrawn !== undefined ? w.totalWithdrawn : w.total_withdrawn,
+        last_roi_at: w.lastRoiAt !== undefined ? w.lastRoiAt : w.last_roi_at,
+        wallet_roi_earned: w.walletRoiEarned !== undefined ? w.walletRoiEarned : w.wallet_roi_earned,
+        roi_income: w.roiIncome !== undefined ? w.roiIncome : w.roi_income,
+        direct_income: w.directIncome !== undefined ? w.directIncome : w.direct_income,
+        level_income: w.levelIncome !== undefined ? w.levelIncome : w.level_income,
+        matrix_income: w.matrixIncome !== undefined ? w.matrixIncome : w.matrix_income,
+        hold_balance: w.holdBalance !== undefined ? w.holdBalance : w.hold_balance,
+        total_roi_rate: w.totalRoiRate !== undefined ? w.totalRoiRate : w.total_roi_rate,
+        package_roi_rate: w.packageRoiRate !== undefined ? w.package_roi_rate : w.package_roi_rate,
+        base_roi_rate: w.baseRoiRate !== undefined ? w.baseRoiRate : w.base_roi_rate,
+        daily_package_roi: w.dailyPackageRoi !== undefined ? w.dailyPackageRoi : w.daily_package_roi,
+        available_spins: w.availableSpins !== undefined ? w.availableSpins : w.available_spins,
+        // Camel case equivalents
+        userId: w.userId !== undefined ? w.userId : w.user_id,
+        totalEarned: w.totalEarned !== undefined ? w.totalEarned : w.total_earned,
+        totalWithdrawn: w.totalWithdrawn !== undefined ? w.totalWithdrawn : w.total_withdrawn,
+        lastRoiAt: w.lastRoiAt !== undefined ? w.lastRoiAt : w.last_roi_at,
+        walletRoiEarned: w.walletRoiEarned !== undefined ? w.walletRoiEarned : w.wallet_roi_earned,
+        roiIncome: w.roiIncome !== undefined ? w.roiIncome : w.roi_income,
+        directIncome: w.directIncome !== undefined ? w.directIncome : w.direct_income,
+        levelIncome: w.levelIncome !== undefined ? w.levelIncome : w.level_income,
+        matrixIncome: w.matrixIncome !== undefined ? w.matrixIncome : w.matrix_income,
+        holdBalance: w.holdBalance !== undefined ? w.holdBalance : w.hold_balance,
+        totalRoiRate: w.totalRoiRate !== undefined ? w.totalRoiRate : w.total_roi_rate,
+        packageRoiRate: w.packageRoiRate !== undefined ? w.package_roi_rate : w.package_roi_rate,
+        baseRoiRate: w.baseRoiRate !== undefined ? w.baseRoiRate : w.base_roi_rate,
+        dailyPackageRoi: w.dailyPackageRoi !== undefined ? w.dailyPackageRoi : w.daily_package_roi,
+        availableSpins: w.availableSpins !== undefined ? w.availableSpins : w.available_spins
     };
 }
 
