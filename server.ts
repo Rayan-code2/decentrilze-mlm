@@ -507,6 +507,58 @@ app.post('/api/user/wallet/update', verifyAuth, async (req: any, res: any) => {
     }
 });
 
+// Helpers for snake_case & camelCase cross-compatibility
+function normalizePackage(p: any) {
+    if (!p) return p;
+    let percents = [0,0,0,0,0,0,0,0,0,0];
+    try { 
+        if (p.levelIncomePercents) percents = JSON.parse(p.levelIncomePercents); 
+    } catch (e) {}
+    return {
+        ...p,
+        daily_roi: p.dailyRoi !== undefined ? p.dailyRoi : p.daily_roi,
+        duration_days: p.durationDays !== undefined ? p.durationDays : p.duration_days,
+        direct_income_percent: p.directIncomePercent !== undefined ? p.directIncomePercent : p.direct_income_percent,
+        matrix_income_percent: p.matrixIncomePercent !== undefined ? p.matrixIncomePercent : p.matrix_income_percent,
+        is_active: p.isActive !== undefined ? p.isActive : p.is_active,
+        roi_interval_minutes: p.roiIntervalMinutes !== undefined ? p.roiIntervalMinutes : p.roi_interval_minutes,
+        max_roi_percent: p.maxRoiPercent !== undefined ? p.maxRoiPercent : p.max_roi_percent,
+        level_income_percents: percents,
+        // Camel case equivalents
+        dailyRoi: p.dailyRoi !== undefined ? p.dailyRoi : p.daily_roi,
+        durationDays: p.durationDays !== undefined ? p.durationDays : p.duration_days,
+        directIncomePercent: p.directIncomePercent !== undefined ? p.directIncomePercent : p.direct_income_percent,
+        matrixIncomePercent: p.matrixIncomePercent !== undefined ? p.matrixIncomePercent : p.matrix_income_percent,
+        roiIntervalMinutes: p.roiIntervalMinutes !== undefined ? p.roiIntervalMinutes : p.roi_interval_minutes,
+        maxRoiPercent: p.maxRoiPercent !== undefined ? p.maxRoiPercent : p.max_roi_percent,
+        isActive: p.isActive !== undefined ? p.isActive : p.is_active
+    };
+}
+
+function normalizePurchase(p: any) {
+    if (!p) return p;
+    return {
+        ...p,
+        user_id: p.userId !== undefined ? p.userId : p.user_id,
+        package_id: p.packageId !== undefined ? p.packageId : p.package_id,
+        daily_roi: p.dailyRoi !== undefined ? p.dailyRoi : p.daily_roi,
+        roi_interval_minutes: p.roiIntervalMinutes !== undefined ? p.roiIntervalMinutes : p.roi_interval_minutes,
+        max_roi_percent: p.maxRoiPercent !== undefined ? p.maxRoiPercent : p.max_roi_percent,
+        roi_earned: p.roiEarned !== undefined ? p.roiEarned : p.roi_earned,
+        is_active: p.isActive !== undefined ? p.isActive : p.is_active,
+        activated_at: p.activatedAt !== undefined ? p.activatedAt : p.activated_at,
+        // Camel case equivalents
+        userId: p.userId !== undefined ? p.userId : p.user_id,
+        packageId: p.packageId !== undefined ? p.packageId : p.package_id,
+        dailyRoi: p.dailyRoi !== undefined ? p.dailyRoi : p.daily_roi,
+        roiIntervalMinutes: p.roiIntervalMinutes !== undefined ? p.roiIntervalMinutes : p.roi_interval_minutes,
+        maxRoiPercent: p.maxRoiPercent !== undefined ? p.maxRoiPercent : p.max_roi_percent,
+        roiEarned: p.roiEarned !== undefined ? p.roiEarned : p.roi_earned,
+        isActive: p.isActive !== undefined ? p.isActive : p.is_active,
+        activatedAt: p.activatedAt !== undefined ? p.activatedAt : p.activated_at
+    };
+}
+
 // Packages
 app.get('/api/packages', async (req: any, res: any) => {
     try {
@@ -517,11 +569,7 @@ app.get('/api/packages', async (req: any, res: any) => {
             await db.insert(mlmPackages).values({ name: '$50 Node', price: 50.0, dailyRoi: 1.5, roiIntervalMinutes: 1440, maxRoiPercent: 200.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 15.0, levelIncomePercents: '[5,2,2,1,1]' });
             list = await db.select().from(mlmPackages).orderBy(asc(mlmPackages.price));
         }
-        const packagesParsed = list.map(p => {
-            let percents = [0,0,0,0,0,0,0,0,0,0];
-            try { if (p.levelIncomePercents) percents = JSON.parse(p.levelIncomePercents); } catch (e) {}
-            return { ...p, level_income_percents: percents };
-        });
+        const packagesParsed = list.map(normalizePackage);
         res.json({ success: true, packages: packagesParsed });
     } catch (err: any) {
         res.status(500).json({ success: false, message: cleanErrorMessage(err) });
@@ -532,25 +580,44 @@ app.get('/api/packages', async (req: any, res: any) => {
 app.post('/api/admin/save-package', verifyAdmin, async (req: any, res: any) => {
     const { pkg } = req.body;
     try {
+        console.log("[ADMIN_SAVE_PACKAGE] Incoming pkg:", JSON.stringify(pkg));
+        
+        // Robust payload parser supporting both camelCase and snake_case values
         const payload = {
             name: pkg.name || 'Custom Package',
-            price: Number(pkg.price || 0),
-            dailyRoi: Number(pkg.dailyRoi || pkg.daily_roi || 0),
-            roiIntervalMinutes: parseInt(pkg.roiIntervalMinutes || pkg.roi_interval_minutes || 1440, 10),
-            durationDays: parseInt(pkg.durationDays || pkg.duration_days || 365, 10),
-            maxRoiPercent: Number(pkg.maxRoiPercent || pkg.max_roi_percent || 200),
-            directIncomePercent: Number(pkg.directIncomePercent || pkg.direct_income_percent || 0),
-            matrixIncomePercent: Number(pkg.matrixIncomePercent || pkg.matrix_income_percent || 0),
-            levelIncomePercents: typeof pkg.level_income_percents === 'string' ? pkg.level_income_percents : JSON.stringify(pkg.level_income_percents || []),
-            isActive: pkg.isActive !== undefined ? pkg.isActive : true
+            price: Number(pkg.price !== undefined ? pkg.price : 0),
+            dailyRoi: Number(pkg.dailyRoi !== undefined ? pkg.dailyRoi : (pkg.daily_roi !== undefined ? pkg.daily_roi : 0)),
+            roiIntervalMinutes: parseInt(pkg.roiIntervalMinutes !== undefined ? pkg.roiIntervalMinutes : (pkg.roi_interval_minutes !== undefined ? pkg.roi_interval_minutes : 1440), 10),
+            durationDays: parseInt(pkg.durationDays !== undefined ? pkg.durationDays : (pkg.duration_days !== undefined ? pkg.duration_days : 365), 10),
+            maxRoiPercent: Number(pkg.maxRoiPercent !== undefined ? pkg.maxRoiPercent : (pkg.max_roi_percent !== undefined ? pkg.max_roi_percent : 200)),
+            directIncomePercent: Number(pkg.directIncomePercent !== undefined ? pkg.directIncomePercent : (pkg.direct_income_percent !== undefined ? pkg.direct_income_percent : 0)),
+            matrixIncomePercent: Number(pkg.matrixIncomePercent !== undefined ? pkg.matrix_income_percent : (pkg.matrix_income_percent !== undefined ? pkg.matrix_income_percent : 0)),
+            levelIncomePercents: typeof pkg.level_income_percents === 'string' ? pkg.level_income_percents : (typeof pkg.levelIncomePercents === 'string' ? pkg.levelIncomePercents : JSON.stringify(pkg.level_income_percents || pkg.levelIncomePercents || [])),
+            isActive: pkg.isActive !== undefined ? pkg.isActive : (pkg.is_active !== undefined ? pkg.is_active : true)
         };
-        if (pkg.id) {
-            await db.update(mlmPackages).set(payload).where(eq(mlmPackages.id, parseInt(pkg.id, 10)));
+
+        console.log("[ADMIN_SAVE_PACKAGE] Formatted payload:", JSON.stringify(payload));
+
+        // Check if pkg.id is a valid numeric database ID
+        const rawId = pkg.id;
+        const parsedId = parseInt(rawId, 10);
+        const isNumericId = !isNaN(parsedId) && /^\d+$/.test(String(rawId).trim());
+
+        if (isNumericId) {
+            console.log(`[ADMIN_SAVE_PACKAGE] Updating package ID: ${parsedId}`);
+            const updateRes = await db.update(mlmPackages).set(payload).where(eq(mlmPackages.id, parsedId)).returning();
+            if (!updateRes || updateRes.length === 0) {
+                console.log(`[ADMIN_SAVE_PACKAGE] Package ID: ${parsedId} not found in database. Inserting instead.`);
+                await db.insert(mlmPackages).values(payload);
+            }
         } else {
+            console.log(`[ADMIN_SAVE_PACKAGE] Non-numeric ID: "${rawId}". Creating a new package.`);
             await db.insert(mlmPackages).values(payload);
         }
+
         res.json({ success: true, message: 'Package saved successfully' });
     } catch (err: any) {
+        console.error("[ADMIN_SAVE_PACKAGE] Error:", err);
         res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
@@ -779,7 +846,8 @@ app.get('/api/admin/users', verifyAdmin, async (req: any, res: any) => {
 app.get('/api/admin/purchases', verifyAdmin, async (req: any, res: any) => {
     try {
         const list = await db.select().from(purchases).orderBy(desc(purchases.activatedAt));
-        res.json({ success: true, purchases: list });
+        const normalized = list.map(normalizePurchase);
+        res.json({ success: true, purchases: normalized });
     } catch (err: any) {
         res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
@@ -800,7 +868,8 @@ app.get('/api/user/team-data/:userId', verifyAuth, async (req: any, res: any) =>
         const teamUids = teamUsers.map(u => u.uid);
         let teamPurchases: any[] = [];
         if (teamUids.length > 0) {
-            teamPurchases = await db.select().from(purchases).where(sql`${purchases.userId} IN (${teamUids.map(u => `'${u}'`).join(',')})`);
+            const rawPurchases = await db.select().from(purchases).where(sql`${purchases.userId} IN (${teamUids.map(u => `'${u}'`).join(',')})`);
+            teamPurchases = rawPurchases.map(normalizePurchase);
         }
         res.json({ success: true, users: teamUsers, purchases: teamPurchases });
     } catch (err: any) {
@@ -814,7 +883,8 @@ app.post('/api/user/purchases', verifyAuth, async (req: any, res: any) => {
     try {
         const resolvedId = await resolveUserAuthId(userId) || userId;
         const list = await db.select().from(purchases).where(eq(purchases.userId, resolvedId)).orderBy(desc(purchases.activatedAt));
-        res.json({ success: true, documents: list });
+        const normalized = list.map(normalizePurchase);
+        res.json({ success: true, documents: normalized });
     } catch (err: any) {
         res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
