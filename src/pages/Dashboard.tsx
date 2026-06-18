@@ -799,7 +799,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         {/* MY ACTIVE PLAN SUMMARY (MERA PLAN) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 !mt-4">
           <div className="space-y-3">
-            {activePackages.filter(pkg => Number(pkg.price) !== 20).map((pkg) => (
+            {activePackages.filter(pkg => Number(pkg.price) === 10).map((pkg) => (
               <div key={pkg.id} className="relative group">
                 <div 
                   onClick={() => onNavigate?.('mining')}
@@ -827,7 +827,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </div>
               </div>
             ))}
-            {activePackages.length === 0 && (
+            {activePackages.filter(pkg => Number(pkg.price) === 10).length === 0 && (
               <div className="relative glass-card p-6 rounded-2xl border-dashed border-white/10 flex flex-col items-center justify-center text-center">
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">No Active Nodes</p>
                 <button 
