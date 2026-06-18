@@ -547,6 +547,7 @@ function normalizePurchase(p: any) {
         roi_earned: p.roiEarned !== undefined ? p.roiEarned : p.roi_earned,
         is_active: p.isActive !== undefined ? p.isActive : p.is_active,
         activated_at: p.activatedAt !== undefined ? p.activatedAt : p.activated_at,
+        last_paid_at: p.lastPaidAt !== undefined ? p.lastPaidAt : p.last_paid_at,
         // Camel case equivalents
         userId: p.userId !== undefined ? p.userId : p.user_id,
         packageId: p.packageId !== undefined ? p.packageId : p.package_id,
@@ -555,7 +556,8 @@ function normalizePurchase(p: any) {
         maxRoiPercent: p.maxRoiPercent !== undefined ? p.maxRoiPercent : p.max_roi_percent,
         roiEarned: p.roiEarned !== undefined ? p.roiEarned : p.roi_earned,
         isActive: p.isActive !== undefined ? p.isActive : p.is_active,
-        activatedAt: p.activatedAt !== undefined ? p.activatedAt : p.activated_at
+        activatedAt: p.activatedAt !== undefined ? p.activatedAt : p.activated_at,
+        lastPaidAt: p.lastPaidAt !== undefined ? p.lastPaidAt : p.last_paid_at
     };
 }
 
@@ -755,7 +757,8 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
             const result = await db.insert(purchases).values({
                 userId, packageId: pkg.id, price,
                 dailyRoi: pkg.dailyRoi, roiIntervalMinutes: pkg.roiIntervalMinutes,
-                maxRoiPercent: pkg.maxRoiPercent, roiEarned: 0.0, isActive: true
+                maxRoiPercent: pkg.maxRoiPercent, roiEarned: 0.0, isActive: true,
+                lastPaidAt: new Date()
             }).returning();
             createdPurchase = result[0];
         } catch (insertErr) {
@@ -1297,7 +1300,8 @@ async function processPackageROI(p: any, settings: any): Promise<boolean> {
             return false;
         }
 
-        const lastPaidTs = freshPkg.activatedAt!.getTime();
+        const lastPaidAt = freshPkg.lastPaidAt || freshPkg.activatedAt || new Date();
+        const lastPaidTs = lastPaidAt.getTime();
         const nowTs = Date.now();
         const elapsedMs = nowTs - lastPaidTs;
         const pendingCycles = Math.floor(elapsedMs / (intervalMins * 60000));
@@ -1305,6 +1309,7 @@ async function processPackageROI(p: any, settings: any): Promise<boolean> {
 
         let processedAny = false;
         let pointerTs = lastPaidTs;
+        let finalUpdatedPaidAt = new Date(lastPaidTs);
 
         for (let i = 1; i <= Math.min(pendingCycles, 10); i++) {
             const currentCycleTargetTs = pointerTs + (intervalMins * 60000);
@@ -1322,8 +1327,13 @@ async function processPackageROI(p: any, settings: any): Promise<boolean> {
                 processedAny = true;
                 currentEarned = Number((currentEarned + payoutAmt).toFixed(4));
                 pointerTs = currentCycleTargetTs;
+                finalUpdatedPaidAt = new Date(currentCycleTargetTs);
                 const isFinished = maxEarningCap > 0 && currentEarned >= (maxEarningCap - 0.0001);
-                await db.update(purchases).set({ roiEarned: Number(currentEarned.toFixed(4)), isActive: !isFinished }).where(eq(purchases.id, freshPkg.id));
+                await db.update(purchases).set({ 
+                    roiEarned: Number(currentEarned.toFixed(4)), 
+                    isActive: !isFinished,
+                    lastPaidAt: finalUpdatedPaidAt
+                }).where(eq(purchases.id, freshPkg.id));
                 if (isFinished) break;
             } else {
                 break;
@@ -1405,6 +1415,7 @@ async function verifyAndHealPostgresSchema() {
         `ALTER TABLE "purchases" ADD COLUMN IF NOT EXISTS "roi_earned" double precision NOT NULL DEFAULT 0.0;`,
         `ALTER TABLE "purchases" ADD COLUMN IF NOT EXISTS "is_active" boolean NOT NULL DEFAULT true;`,
         `ALTER TABLE "purchases" ADD COLUMN IF NOT EXISTS "activated_at" timestamp DEFAULT now();`,
+        `ALTER TABLE "purchases" ADD COLUMN IF NOT EXISTS "last_paid_at" timestamp;`,
         `ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "status" text NOT NULL DEFAULT 'completed';`,
         `ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "description" text;`,
         `ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "from_user_id" text;`,

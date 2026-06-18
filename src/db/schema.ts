@@ -69,6 +69,7 @@ export const purchases = pgTable('purchases', {
   roiEarned: doublePrecision('roi_earned').notNull().default(0.0),
   isActive: boolean('is_active').notNull().default(true),
   activatedAt: timestamp('activated_at').defaultNow(),
+  lastPaidAt: timestamp('last_paid_at'),
 });
 
 export const transactions = pgTable('transactions', {
