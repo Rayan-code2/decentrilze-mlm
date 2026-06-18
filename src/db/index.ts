@@ -43,7 +43,15 @@ export const createPool = () => {
   const password = String(process.env.SQL_PASSWORD || '');
   const database = String(process.env.SQL_DB_NAME || 'cryptospiral');
   // If it's a Unix socket (starts with '/'), pg driver expects port 5432 to look for the socket file .s.PGSQL.5432
-  const port = host.startsWith('/') ? 5432 : (process.env.SQL_PORT ? parseInt(process.env.SQL_PORT, 10) : 5432);
+  let port = host.startsWith('/') ? 5432 : (process.env.SQL_PORT ? parseInt(process.env.SQL_PORT, 10) : 5432);
+
+  // Safe Guard: If DB port matches the Node server port (3005/3000) on localhost, it's a configuration mistake in VPS .env
+  if ((host === 'localhost' || host === '127.0.0.1') && (port === 3005 || port === 3000)) {
+    console.warn(`\n⚠️ [Database WARNING] SQL_PORT is configured as ${port} under localhost, which is your Web Server Port!`);
+    console.warn(`⚠️ This is a VPS .env configuration error (Web Port is 3005, PostgreSQL database port should be 5432).`);
+    console.warn(`⚠️ Automatically falling back to PostgreSQL default port 5432 to prevent 'Connection terminated unexpectedly' error.\n`);
+    port = 5432;
+  }
 
   console.log(`[Database] Connecting to ${host}:${port}/${database} as ${user} (password status: ${password ? 'PROVIDED' : 'EMPTY'})...`);
 
