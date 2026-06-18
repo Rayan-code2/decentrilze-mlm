@@ -63,7 +63,7 @@ for (const envPath of envPaths) {
 }
 
 // --- Auth Helpers ---
-const JWT_SECRET = process.env.JWT_SECRET || 'spiralKeySecureSystem_12345';
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-dev-jwt-security-key-32-chars-long';
 
 function hashPassword(password: string): string {
     return crypto.createHmac('sha256', JWT_SECRET).update(password).digest('hex');
@@ -83,7 +83,8 @@ function cleanErrorMessage(err: any): string {
     // Server logs mein output for developer debugging
     console.error('[Server Error Detail]:', err);
 
-    const msg = String(err.message || err.detail || (err.cause && err.cause.message) || err).trim();
+    const actualMessage = (err.cause && err.cause.message) ? err.cause.message : (err.message || err.detail || err);
+    const msg = String(actualMessage).trim();
     let fullErrStr = '';
     try {
         fullErrStr = JSON.stringify(err);
@@ -215,7 +216,15 @@ try {
 } catch (e) {}
 
 const app = express();
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : defaultPort;
+let PORT = defaultPort;
+if (process.env.PORT) {
+    const envPort = parseInt(process.env.PORT, 10);
+    if (envPort === 8080) {
+        PORT = 3000;
+    } else {
+        PORT = envPort;
+    }
+}
 
 app.use(express.json());
 
@@ -266,7 +275,7 @@ const verifyAdmin = async (req: any, res: any, next: any) => {
             userId = decoded ? decoded.uid : token;
         }
         const userDoc = await db.select().from(users).where(eq(users.uid, userId)).limit(1);
-        const isAdmin = userDoc.length > 0 && userDoc[0].role === 'admin';
+        const isAdmin = userDoc.length > 0 && String(userDoc[0].role || '').toLowerCase() === 'admin';
         if (isAdmin || userId === '1') {
             req.user = { uid: userId, role: 'admin' };
             return next();
@@ -483,7 +492,7 @@ app.post('/api/user/wallet/update', verifyAuth, async (req: any, res: any) => {
     const { userId, data } = req.body;
     try {
         const resolvedId = await resolveUserAuthId(userId) || userId;
-        const isAdmin = req.user?.role === 'admin';
+        const isAdmin = String(req.user?.role || '').toLowerCase() === 'admin';
         if (!isAdmin && resolvedId !== req.user?.uid) {
             return res.status(403).json({ success: false, message: 'Forbidden update parameters' });
         }

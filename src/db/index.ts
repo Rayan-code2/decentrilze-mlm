@@ -42,15 +42,17 @@ export const createPool = () => {
   const user = String(process.env.SQL_USER || 'postgres');
   const password = String(process.env.SQL_PASSWORD || '');
   const database = String(process.env.SQL_DB_NAME || 'cryptospiral');
+  // If it's a Unix socket (starts with '/'), pg driver expects port 5432 to look for the socket file .s.PGSQL.5432
+  const port = host.startsWith('/') ? 5432 : (process.env.SQL_PORT ? parseInt(process.env.SQL_PORT, 10) : 5432);
 
-  console.log(`[Database] Connecting to ${host}/${database} as ${user} (password status: ${password ? 'PROVIDED' : 'EMPTY'})...`);
+  console.log(`[Database] Connecting to ${host}:${port}/${database} as ${user} (password status: ${password ? 'PROVIDED' : 'EMPTY'})...`);
 
   return new Pool({
     host,
     user,
     password,
     database,
-    port: 5432,
+    port,
     connectionTimeoutMillis: 15000,
     idleTimeoutMillis: 30000,
     max: 10,

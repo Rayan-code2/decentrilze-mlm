@@ -72,7 +72,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
 
       const sortedPackages = (packagesData || []).sort((a: any, b: any) => a.price - b.price);
       setPackages(sortedPackages);
-      setRequests(requestsData || []);
+      
+      const mappedRequests = (requestsData || []).map((r: any) => ({
+        ...r,
+        user_id: r.user_id || r.userId,
+        utr_number: r.utr_number || r.utrNumber,
+        inr_amount: r.inr_amount || r.inrAmount,
+        created_at: r.created_at || r.createdAt,
+      }));
+      setRequests(mappedRequests);
       setPurchases(purchasesData || []);
       setLastUpdated(Date.now());
       

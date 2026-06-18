@@ -70,7 +70,14 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
         setSettings(settingsData as any);
       }
       
-      setHistory(historyData || []);
+      const mappedHistory = (historyData || []).map((r: any) => ({
+        ...r,
+        user_id: r.user_id || r.userId,
+        utr_number: r.utr_number || r.utrNumber,
+        inr_amount: r.inr_amount || r.inrAmount,
+        created_at: r.created_at || r.createdAt,
+      }));
+      setHistory(mappedHistory);
 
       // Auto-redirect if current tab is disabled, only switch if the alternate is actually active to prevent ping-pong loop!
       const finalSettings = settingsData || await mockApi.db.getSettings();
