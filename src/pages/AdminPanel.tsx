@@ -674,15 +674,26 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${u.is_active ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
-                          {u.is_active ? 'Active' : 'Inactive'}
+                        <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${
+                          (u.is_active || (u as any).isActive) 
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                            : 'bg-red-500/10 border-red-500/20 text-red-400'
+                        }`}>
+                          {(u.is_active || (u as any).isActive) ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td className="p-4">
-                        <span className="text-xs font-black text-white italic">{u.direct_count}</span>
+                        <span className="text-xs font-black text-white italic">{u.direct_count ?? (u as any).directCount ?? 0}</span>
                       </td>
                       <td className="p-4">
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{new Date(u.created_at).toLocaleDateString()}</span>
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                          {(() => {
+                            const dateVal = u.created_at || (u as any).createdAt;
+                            if (!dateVal) return 'N/A';
+                            const parsed = new Date(dateVal);
+                            return isNaN(parsed.getTime()) ? 'N/A' : parsed.toLocaleDateString();
+                          })()}
+                        </span>
                       </td>
                       <td className="p-4 text-right flex justify-end gap-2">
                         <button 

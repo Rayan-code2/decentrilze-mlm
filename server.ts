@@ -69,9 +69,55 @@ function hashPassword(password: string): string {
     return crypto.createHmac('sha256', JWT_SECRET).update(password).digest('hex');
 }
 
+function normalizeUser(u: any) {
+    if (!u) return u;
+    return {
+        ...u,
+        // Ensure both fields exist for compatibility
+        is_active: u.isActive !== undefined ? u.isActive : u.is_active,
+        isActive: u.isActive !== undefined ? u.isActive : u.is_active,
+        
+        referred_by: u.referredBy !== undefined ? u.referredBy : u.referred_by,
+        referredBy: u.referredBy !== undefined ? u.referredBy : u.referred_by,
+        
+        direct_count: u.directCount !== undefined ? u.directCount : u.direct_count,
+        directCount: u.directCount !== undefined ? u.directCount : u.direct_count,
+        
+        is_qualified: u.isQualified !== undefined ? u.isQualified : u.is_qualified,
+        isQualified: u.isQualified !== undefined ? u.isQualified : u.is_qualified,
+        
+        is_blocked: u.isBlocked !== undefined ? u.isBlocked : u.is_blocked,
+        isBlocked: u.isBlocked !== undefined ? u.isBlocked : u.is_blocked,
+        
+        matrix_parent_id: u.matrixParentId !== undefined ? u.matrixParentId : u.matrix_parent_id,
+        matrixParentId: u.matrixParentId !== undefined ? u.matrixParentId : u.matrix_parent_id,
+        
+        global_rank: u.globalRank !== undefined ? u.globalRank : u.global_rank,
+        globalRank: u.globalRank !== undefined ? u.globalRank : u.global_rank,
+        
+        node_id: u.nodeId !== undefined ? u.nodeId : u.node_id,
+        nodeId: u.nodeId !== undefined ? u.nodeId : u.node_id,
+        
+        personal_business: u.personalBusiness !== undefined ? u.personalBusiness : u.personal_business,
+        personalBusiness: u.personalBusiness !== undefined ? u.personalBusiness : u.personal_business,
+        
+        team_business: u.teamBusiness !== undefined ? u.teamBusiness : u.team_business,
+        teamBusiness: u.teamBusiness !== undefined ? u.teamBusiness : u.team_business,
+        
+        created_at: u.createdAt !== undefined ? u.createdAt : u.created_at,
+        createdAt: u.createdAt !== undefined ? u.createdAt : u.created_at,
+        
+        user_id: u.uid !== undefined ? u.uid : u.user_id,
+        userId: u.uid !== undefined ? u.uid : u.user_id,
+        
+        // ID conversion for compatibility as well
+        id: u.uid !== undefined ? u.uid : (u.id !== undefined ? String(u.id) : undefined)
+    };
+}
+
 function sanitizeUser(user: any) {
     if (!user) return user;
-    const san = { ...user };
+    const san = normalizeUser(user);
     delete san.password;
     return san;
 }
@@ -877,7 +923,7 @@ app.get('/api/user/directs/:userId', verifyAuth, async (req: any, res: any) => {
     try {
         const resolvedId = await resolveUserAuthId(userId) || userId;
         const list = await db.select().from(users).where(eq(users.referredBy, resolvedId)).orderBy(desc(users.createdAt));
-        res.json({ success: true, directs: list });
+        res.json({ success: true, directs: list.map(sanitizeUser) });
     } catch (err: any) {
         res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
@@ -887,7 +933,7 @@ app.get('/api/user/directs/:userId', verifyAuth, async (req: any, res: any) => {
 app.get('/api/admin/users', verifyAdmin, async (req: any, res: any) => {
     try {
         const allUsrs = await db.select().from(users).orderBy(desc(users.createdAt));
-        res.json({ success: true, users: allUsrs });
+        res.json({ success: true, users: allUsrs.map(sanitizeUser) });
     } catch (err: any) {
         res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
@@ -922,7 +968,7 @@ app.get('/api/user/team-data/:userId', verifyAuth, async (req: any, res: any) =>
             const rawPurchases = await db.select().from(purchases).where(sql`${purchases.userId} IN (${teamUids.map(u => `'${u}'`).join(',')})`);
             teamPurchases = rawPurchases.map(normalizePurchase);
         }
-        res.json({ success: true, users: teamUsers, purchases: teamPurchases });
+        res.json({ success: true, users: teamUsers.map(sanitizeUser), purchases: teamPurchases });
     } catch (err: any) {
         res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
