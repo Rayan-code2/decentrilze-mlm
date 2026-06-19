@@ -331,6 +331,10 @@ const Dashboard: React.FC<DashboardProps> = ({
     return activePackages.reduce((acc, p) => acc + p.price, 0);
   }, [activePackages]);
 
+  const highestActivePkgPrice = useMemo(() => {
+    return activePackages.length > 0 ? Math.max(...activePackages.map(p => Number(p.price) || 0)) : 0;
+  }, [activePackages]);
+
   const cappingLimit = useMemo(() => {
     if (activePackages.length === 0) return 0;
     
@@ -1337,14 +1341,14 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </div>
                 <h4 className="text-2xl font-black text-white uppercase italic tracking-tighter mb-2">Qualification Required</h4>
                 <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] max-w-[280px] leading-relaxed">
-                  {activePackages.some(p => p.price >= (settings?.boosting_min_pkg_price || 10)) 
-                    ? `Refer at least ${settings?.boosting_min_directs || 1} direct partner to activate your Global Boosting Node` 
-                    : `Purchase a $${settings?.boosting_min_pkg_price || 10}+ Node and refer ${settings?.boosting_min_directs || 1} direct to enter the Global Pool`}
+                  {highestActivePkgPrice >= (settings?.boosting_min_pkg_price || 10) 
+                    ? `Refer at least ${settings?.boosting_min_directs || 2} direct partner to activate your Global Boosting Node` 
+                    : `Purchase a $${settings?.boosting_min_pkg_price || 10}+ Node and refer at least ${settings?.boosting_min_directs || 2} direct partners to enter the Global Pool`}
                 </p>
                 
                 <div className="mt-8 flex flex-wrap justify-center gap-2">
-                  <div className={`px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest ${activePackages.some(p => p.price >= (settings?.boosting_min_pkg_price || 10)) ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' : 'bg-white/5 border-white/10 text-slate-500'}`}>
-                    Node Active
+                  <div className={`px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest ${highestActivePkgPrice >= (settings?.boosting_min_pkg_price || 10) ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' : 'bg-white/5 border-white/10 text-slate-500'}`}>
+                    Node: ${highestActivePkgPrice}/${settings?.boosting_min_pkg_price || 10}
                   </div>
                   <div className={`px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest ${user.direct_count >= (settings?.boosting_min_directs || 1) ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' : 'bg-white/5 border-white/10 text-slate-500'}`}>
                     {user.direct_count || 0}/{settings?.boosting_min_directs || 1} Partner
@@ -1369,7 +1373,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                     <div className="grid grid-cols-2 gap-4 pt-1">
                       <div>
                         <p className="text-[8px] font-black text-slate-600 uppercase">Qualifying Pkg</p>
-                        <p className={`text-xs font-black ${boostingDiagnostics.qualifiedPkg ? 'text-emerald-400' : 'text-red-400'}`}>{boostingDiagnostics.qualifiedPkg ? 'PASSED' : 'REQUIRED'}</p>
+                        <p className={`text-xs font-black ${boostingDiagnostics.qualifiedPkg ? 'text-emerald-400' : 'text-red-400'}`}>
+                          ${highestActivePkgPrice} / ${settings?.boosting_min_pkg_price || 10}
+                        </p>
                       </div>
                       <div>
                         <p className="text-[8px] font-black text-slate-600 uppercase">Direct Partners</p>
