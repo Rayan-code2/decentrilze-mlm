@@ -16,16 +16,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, on
   const isAdmin = String(userRole || '').toLowerCase() === 'admin';
   const isCurrentlyLive = isAppwriteConfigured();
 
-  const toggleApiMode = () => {
-    const isMock = localStorage.getItem('spiral_use_mock_api') === 'true';
-    if (isMock) {
-      localStorage.removeItem('spiral_use_mock_api');
-    } else {
-      localStorage.setItem('spiral_use_mock_api', 'true');
-    }
-    window.location.reload();
-  };
-
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const menuItems = [
@@ -73,41 +63,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, on
         </div>
 
         <div className="mt-auto flex flex-col">
-          {/* Mainframe Link Diagnostics */}
-          <div className="mx-6 mb-4 p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-3 font-mono text-[9px]">
-            <div className="flex items-center justify-between">
-              <span className="text-white/40 uppercase tracking-wider">DATABASE SYSTEM:</span>
-              <span className={`px-2 py-0.5 rounded font-black text-[8px] uppercase tracking-widest ${
-                isCurrentlyLive ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/30'
-              }`}>
-                {isCurrentlyLive ? 'APWR-LIVE' : 'SIMULATION MOCK'}
-              </span>
-            </div>
-            
-            <div className="space-y-1 text-white/30 truncate select-all">
-              <div className="flex justify-between gap-1 overflow-hidden">
-                <span className="text-white/40 uppercase">ENDPT:</span>
-                <span className="truncate text-right w-28 text-white/60" title={getEndpoint()}>{getEndpoint()}</span>
-              </div>
-              <div className="flex justify-between gap-1 overflow-hidden">
-                <span className="text-white/40 uppercase">PROJID:</span>
-                <span className="truncate text-right w-28 text-white/60" title={getProjectId()}>{getProjectId()}</span>
-              </div>
-            </div>
-
-            <button
-              onClick={toggleApiMode}
-              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 active:scale-95 text-white/70 hover:text-white border border-white/10 hover:border-white/20 transition-all font-black text-[8px] uppercase tracking-widest cursor-pointer group"
-            >
-              <Cpu size={12} className="group-hover:rotate-45 transition-transform text-neon-cyan" />
-              <span>SWITCH TO {isCurrentlyLive ? 'MOCK MODE' : 'LIVE API'}</span>
-            </button>
-            
-            <div className="text-[7px] text-white/25 leading-normal uppercase">
-              * IF LOGIN / EXCHANGE FAILS, TAP SWITCH MODE TO RUN LOCALLY & SEEK AI HELP!
-            </div>
-          </div>
-
           <div className="p-8 pt-2">
             <button 
               onClick={onLogout}
@@ -190,25 +145,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, on
               ))}
               <div className="h-[1px] bg-white/5 my-2"></div>
               
-              {/* Mobile Diagnostics Info Panel */}
-              <div className="p-3 bg-white/5 rounded-2xl flex flex-col gap-2 font-mono text-[8px] border border-white/5">
-                <div className="flex items-center justify-between">
-                  <span className="text-white/40 uppercase tracking-widest">SYSTEM:</span>
-                  <span className={`px-1.5 py-0.5 rounded font-black ${
-                    isCurrentlyLive ? 'text-emerald-400 bg-emerald-500/10' : 'text-neon-cyan bg-neon-cyan/10'
-                  }`}>
-                    {isCurrentlyLive ? 'APWR-LIVE' : 'SIMULATION'}
-                  </span>
-                </div>
-                <button
-                  onClick={toggleApiMode}
-                  className="w-full py-2 bg-white/5 hover:bg-white/10 rounded-xl text-center text-white/70 font-black tracking-wider uppercase border border-white/5 cursor-pointer active:scale-95 transition-all text-[8px]"
-                >
-                  SWITCH TO {isCurrentlyLive ? 'MOCK MODE' : 'LIVE API'}
-                </button>
-              </div>
-
-              <div className="h-[1px] bg-white/5 my-1"></div>
               <button
                 onClick={onLogout}
                 className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-red-400/60 hover:bg-red-400/10 transition-all"

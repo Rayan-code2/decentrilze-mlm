@@ -338,38 +338,27 @@ const App: React.FC = () => {
               <ShieldAlert className="w-5 h-5 text-red-500" />
               Connection Diagnostics
             </h3>
-            <p className="text-xs text-slate-400 mb-2 leading-relaxed">
-              Mainframe sync is taking longer than expected. If your PostgreSQL database or server is inactive or misconfigured, you can bypass this screen and run in local simulation mode.
-            </p>
-            <p className="text-xs text-amber-400/90 mb-4 font-medium leading-relaxed border-l-2 border-amber-500/40 pl-2">
-              ध्यान दें: अगर आपका PostgreSQL डेटाबेस सर्वर चालू नहीं है, तो नीचे दिए गए <strong className="text-amber-300">"[ FORCE LOCAL MOCK MODE ]"</strong> बटन पर क्लिक करें। इससे आपका एप्लीकेशन डेमो मोड में तुरंत लॉगिन और काम करने लगेगा!
+            <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+              Establishing a secure connection with the Mainframe network is taking longer than expected. Please check your internet connection and try again.
             </p>
             
-            <div className="bg-slate-950/80 p-3 rounded-lg border border-slate-800 font-mono text-[10px] space-y-1 mb-5">
-              <div><span className="text-red-400">Endpoint:</span> {getEndpoint()}</div>
-              <div><span className="text-blue-400">Project:</span> {getProjectId()}</div>
-              <div><span className="text-purple-400">Mode:</span> {isLive ? 'LIVE' : 'SIMULATION MOCK'}</div>
-            </div>
-
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => {
-                  localStorage.setItem('spiral_use_mock_api', 'true');
                   window.location.reload();
                 }}
                 className="w-full bg-neon-cyan/20 hover:bg-neon-cyan/30 text-neon-cyan border border-neon-cyan/50 py-2.5 px-4 rounded-lg font-mono font-bold text-xs transition-all tracking-wider text-center cursor-pointer"
               >
-                [ FORCE LOCAL MOCK MODE ]
+                [ RETRY CONNECTION ]
               </button>
               <button
                 onClick={() => {
                   localStorage.removeItem('spiral_user');
-                  localStorage.removeItem('spiral_use_mock_api');
                   window.location.reload();
                 }}
                 className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 px-4 rounded-lg font-mono font-bold text-xs transition-all tracking-wider text-center cursor-pointer"
               >
-                [ RESET SESSION & RETRY ]
+                [ RESET SESSION ]
               </button>
             </div>
           </div>

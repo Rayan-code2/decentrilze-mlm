@@ -29,9 +29,6 @@ export const APPWRITE_CONFIG = {
 };
 
 export const isAppwriteConfigured = () => {
-    if (localStorage.getItem('spiral_use_mock_api') === 'true') {
-        return false;
-    }
     return true;
 };
 

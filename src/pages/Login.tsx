@@ -19,14 +19,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isCurrentlyMock, setIsCurrentlyMock] = useState(localStorage.getItem('spiral_use_mock_api') === 'true');
-
-  const toggleMockMode = () => {
-    const newVal = !isCurrentlyMock;
-    localStorage.setItem('spiral_use_mock_api', newVal ? 'true' : 'false');
-    setIsCurrentlyMock(newVal);
-    window.location.reload();
-  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -286,16 +278,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     {isSignUp ? 'ID Exists? Access Terminal' : 'No ID Found? Register Node'}
                   </button>
                   
-                  <button 
-                    onClick={toggleMockMode}
-                    className="flex items-center gap-2 py-2 px-4 bg-white/[0.02] border border-white/5 rounded-full hover:border-white/10 hover:bg-white/[0.04] transition-all cursor-pointer"
-                    title={isCurrentlyMock ? "Switch back to PostgreSQL Mainnet" : "Switch to Fully Simulated Offline Testing with no server limits"}
-                  >
-                    <div className={`w-1.5 h-1.5 rounded-full ${isCurrentlyMock ? 'bg-amber-500 shadow-[0_0_10px_#f59e0b]' : 'bg-emerald-500 shadow-[0_0_10px_#10b981]'} animate-pulse`}></div>
-                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">
-                      {isCurrentlyMock ? 'Protocol: Simulated Testnet' : 'Protocol: PostgreSQL Mainnet'}
+                  <div className="flex items-center gap-2 py-1.5 px-4 bg-emerald-500/[0.03] border border-emerald-500/10 rounded-full select-none">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981] animate-pulse"></div>
+                    <span className="text-[9px] font-black text-emerald-400/60 uppercase tracking-widest">
+                      Protocol: Secure Mainnet
                     </span>
-                  </button>
+                  </div>
                 </div>
               </>
             )}
