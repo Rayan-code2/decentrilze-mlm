@@ -24,7 +24,7 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
   const [amount, setAmount] = useState('');
   const [utr, setUtr] = useState('');
   const [address, setAddress] = useState('');
-  const [network, setNetwork] = useState('TRC20');
+  const [network, setNetwork] = useState('BEP20');
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -205,7 +205,7 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
             <div className="space-y-4">
               <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em] ml-2">Channel Selection</label>
               <div className="flex gap-2">
-                {['TRC20', 'BEP20', 'ERC20'].map((net) => (
+                {['BEP20', 'ERC20'].map((net) => (
                   <button
                     key={net}
                     onClick={() => setNetwork(net)}
@@ -452,7 +452,7 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
         <div className="absolute left-0 top-0 h-full w-12 bg-gradient-to-r from-black to-transparent z-10"></div>
         <div className="flex items-center gap-6 animate-marquee whitespace-nowrap">
           {[
-            "⚡ TRC20_PROTOCOL_LOAD: 0.12ms",
+            "⚡ BEP20_PROTOCOL_LOAD: 0.11ms",
             "🛡️ SECURE_ENCRYPTION_ACTIVE",
             "💎 BLOCK_INDEX: 582,102",
             "🚀 WITHDRAWAL_SETTLEMENT: INSTANT",
