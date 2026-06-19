@@ -208,7 +208,12 @@ const Dashboard: React.FC<DashboardProps> = ({
           return {
             ...p,
             earned: matchedPurchase?.roi_earned || 0,
-            activeSince: matchedPurchase?.activated_at
+            activeSince: matchedPurchase?.activated_at || (matchedPurchase as any).activatedAt,
+            activated_at: matchedPurchase?.activated_at || (matchedPurchase as any).activatedAt,
+            last_roi_at: matchedPurchase?.last_paid_at || (matchedPurchase as any).lastPaidAt || (matchedPurchase as any).last_paid_at,
+            lastRoiAt: matchedPurchase?.last_paid_at || (matchedPurchase as any).lastPaidAt,
+            roi_interval_minutes: p.roi_interval_minutes || p.roiIntervalMinutes || matchedPurchase?.roi_interval_minutes || (matchedPurchase as any).roiIntervalMinutes,
+            roiIntervalMinutes: p.roi_interval_minutes || p.roiIntervalMinutes || matchedPurchase?.roi_interval_minutes || (matchedPurchase as any).roiIntervalMinutes
           };
         });
         
@@ -420,23 +425,26 @@ const Dashboard: React.FC<DashboardProps> = ({
     
     // Sort active packages by their next expected ROI time
     const sortedActive = [...activePackages].sort((a, b) => {
-        const lastA = new Date(a.last_roi_at || a.activated_at || a.$createdAt).getTime();
-        const lastB = new Date(b.last_roi_at || b.activated_at || b.$createdAt).getTime();
-        const intA = Number(a.roi_interval_minutes || 1440);
-        const intB = Number(b.roi_interval_minutes || 1440);
+        const dateA = a.last_roi_at || a.lastRoiAt || a.activated_at || a.activatedAt || a.activeSince || a.created_at || a.createdAt;
+        const dateB = b.last_roi_at || b.lastRoiAt || b.activated_at || b.activatedAt || b.activeSince || b.created_at || b.createdAt;
+        const lastA = dateA ? new Date(dateA).getTime() : Date.now();
+        const lastB = dateB ? new Date(dateB).getTime() : Date.now();
+        const intA = Number(a.roi_interval_minutes || a.roiIntervalMinutes || 1440);
+        const intB = Number(b.roi_interval_minutes || b.roiIntervalMinutes || 1440);
         return (lastA + intA * 60000) - (lastB + intB * 60000);
     });
 
     const pkg = sortedActive[0];
-    const interval = Number(pkg.roi_interval_minutes || 1440);
-    const last = new Date(pkg.last_roi_at || pkg.activated_at || pkg.$createdAt).getTime();
+    const interval = Number(pkg.roi_interval_minutes || pkg.roiIntervalMinutes || 1440);
+    const datePkg = pkg.last_roi_at || pkg.lastRoiAt || pkg.activated_at || pkg.activatedAt || pkg.activeSince || pkg.created_at || pkg.createdAt;
+    const last = datePkg ? new Date(datePkg).getTime() : Date.now();
     const next = last + (interval * 60000);
     const diff = next - Date.now();
     
     if (diff <= 5000) return "SYNCING..."; // Show SYNCING slightly before the minute ends
     
-    const mins = Math.floor(diff / 60000);
-    const secs = Math.floor((diff % 60000) / 1000);
+    const mins = Math.max(0, Math.floor(diff / 60000));
+    const secs = Math.max(0, Math.floor((diff % 60000) / 1000));
     return `${mins}m ${secs}s`;
   }, [activePackages, tick]);
 

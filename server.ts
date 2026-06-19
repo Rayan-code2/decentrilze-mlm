@@ -960,13 +960,11 @@ app.post('/api/distribute-roi', verifyAuth, async (req: any, res: any) => {
         const resolvedId = await resolveUserAuthId(userId) || userId;
         const activePurchases = await db.select().from(purchases).where(and(eq(purchases.userId, resolvedId), eq(purchases.isActive, true)));
         let yieldsCount = 0;
+        const settings = await getServerSettings();
         for (const p of activePurchases) {
-            const price = Number(p.price);
-            const dailyPerc = p.dailyRoi !== undefined && p.dailyRoi !== null ? Number(p.dailyRoi) : 0.5;
-            const cycleAmt = Number((price * dailyPerc / 100).toFixed(4));
-            if (cycleAmt > 0) {
-                const isCredited = await distributeIncomeServer(resolvedId, cycleAmt, 'roi', `Manual User ROI`, 'SYSTEM', 0, false);
-                if (isCredited) yieldsCount++;
+            const didProcess = await processPackageROI(p, settings);
+            if (didProcess) {
+                yieldsCount++;
             }
         }
         res.json({ success: true, message: `Processed ${yieldsCount} active investments ROI distributions.` });
@@ -1324,12 +1322,24 @@ async function processPackageROI(p: any, settings: any): Promise<boolean> {
     try {
         const freshList = await db.select().from(purchases).where(eq(purchases.id, p.id)).limit(1);
         if (freshList.length === 0) return false;
-        const freshPkg = freshList[0];
+        const freshPkg = normalizePurchase(freshList[0]);
+
+        let livePkg = null;
+        try {
+            const dbPackageList = await db.select().from(mlmPackages).where(eq(mlmPackages.id, freshPkg.packageId)).limit(1);
+            if (dbPackageList.length > 0) livePkg = normalizePackage(dbPackageList[0]);
+        } catch (pkgErr) {
+            console.warn('[processPackageROI] Could not retrieve live package info:', pkgErr);
+        }
 
         const price = Number(freshPkg.price);
-        const dailyPerc = freshPkg.dailyRoi !== undefined && freshPkg.dailyRoi !== null ? Number(freshPkg.dailyRoi) : 0.5;
+        const liveDailyRoi = livePkg ? livePkg.dailyRoi : null;
+        const dailyPerc = liveDailyRoi !== undefined && liveDailyRoi !== null ? Number(liveDailyRoi) : (freshPkg.dailyRoi !== undefined && freshPkg.dailyRoi !== null ? Number(freshPkg.dailyRoi) : 0.5);
+
+        const liveInterval = livePkg ? livePkg.roiIntervalMinutes : null;
+        const intervalMins = Number(liveInterval !== undefined && liveInterval !== null ? liveInterval : (freshPkg.roiIntervalMinutes || settings?.roi_interval_minutes || 1440));
+
         const maxRoiPercent = Number(freshPkg.maxRoiPercent || settings?.max_roi_percent || 200);
-        const intervalMins = Number(freshPkg.roiIntervalMinutes || settings?.roi_interval_minutes || 1440);
         const cyclePayout = Number((price * dailyPerc / 100).toFixed(4));
         if (cyclePayout <= 0 || price <= 0) return false;
 
@@ -1557,7 +1567,7 @@ async function startServer() {
 
         app.listen(PORT, '0.0.0.0', () => {
             console.log(`[Server] Running on http://0.0.0.0:${PORT}`);
-            setInterval(() => distributeGlobalROIWorker(), 600000);
+            setInterval(() => distributeGlobalROIWorker(), 60000);
             distributeGlobalROIWorker();
         });
 

@@ -6,6 +6,7 @@ export interface MLMPackage {
   price: number;
   daily_roi: number;
   roi_interval_minutes?: number;
+  roiIntervalMinutes?: number;
   duration_days: number;
   max_roi_percent?: number;
   direct_income_percent: number;
@@ -96,10 +97,15 @@ export interface Purchase {
   price: number;
   daily_roi?: number;
   roi_interval_minutes?: number;
+  roiIntervalMinutes?: number;
   max_roi_percent?: number;
   roi_earned?: number;
+  roiEarned?: number;
   is_active: boolean;
   activated_at: string;
+  last_paid_at?: string;
+  lastPaidAt?: string;
+  createdAt?: string;
 }
 
 export interface RankReward {
