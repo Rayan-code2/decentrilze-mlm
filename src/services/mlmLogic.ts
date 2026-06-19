@@ -3,29 +3,31 @@ import { users, wallets, mlmPackages, purchases, transactions, exchangerRequests
 import { eq, or, desc, asc, and, sql } from 'drizzle-orm';
 
 // Helper: Resolve User Auth ID from either Auth ID, serial ID or Node ID
-export async function resolveUserAuthId(identifier: string): Promise<string | null> {
-  if (!identifier) return null;
-  if (identifier === '1' || identifier.toLowerCase() === 'system') return '1';
+export async function resolveUserAuthId(identifier: any): Promise<string | null> {
+  if (identifier === undefined || identifier === null) return null;
+  const strId = String(identifier).trim();
+  if (!strId) return null;
+  if (strId === '1' || strId.toLowerCase() === 'system') return '1';
   
   try {
     // 1. Check by Firebase Auth UID (uid field)
-    const userByUid = await db.select().from(users).where(eq(users.uid, identifier)).limit(1);
+    const userByUid = await db.select().from(users).where(eq(users.uid, strId)).limit(1);
     if (userByUid.length > 0) return userByUid[0].uid;
 
     // 2. Check by Node ID (node_id field)
-    const userByNode = await db.select().from(users).where(eq(users.nodeId, identifier)).limit(1);
+    const userByNode = await db.select().from(users).where(eq(users.nodeId, strId)).limit(1);
     if (userByNode.length > 0) return userByNode[0].uid;
 
     // 3. Check by Drizzle numeric primary id
-    if (/^\d+$/.test(identifier)) {
-      const userById = await db.select().from(users).where(eq(users.id, parseInt(identifier, 10))).limit(1);
+    if (/^\d+$/.test(strId)) {
+      const userById = await db.select().from(users).where(eq(users.id, parseInt(strId, 10))).limit(1);
       if (userById.length > 0) return userById[0].uid;
     }
   } catch (err) {
     console.error("[resolveUserAuthId Error]", err);
   }
 
-  return identifier;
+  return strId;
 }
 
 // Fetch user profile from Postgres

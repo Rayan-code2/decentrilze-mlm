@@ -29,6 +29,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
   const [editingPackage, setEditingPackage] = useState<MLMPackage | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editingUserWallet, setEditingUserWallet] = useState<any>(null);
+  const [isSavingUser, setIsSavingUser] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
   const [viewingUser, setViewingUser] = useState<User | null>(null);
   const [viewingUserWallet, setViewingUserWallet] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -273,6 +275,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
     const walletBalanceRaw = formData.get('userWalletBalance');
     const walletBalance = (walletBalanceRaw !== null && walletBalanceRaw !== '') ? Number(walletBalanceRaw) : undefined;
 
+    setIsSavingUser(true);
+    setModalError(null);
+
     try {
       const isLive = isAppwriteConfigured();
       const api = isLive ? appwriteService : mockApi.db;
@@ -296,10 +301,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
         setEditingUser(null);
         fetchData();
       } else {
+        setModalError(res.message || 'Update failed');
         setStatusMsg({ type: 'error', text: res.message || 'Update failed' });
       }
     } catch (e: any) {
+      setModalError(e.message || 'An error occurred');
       setStatusMsg({ type: 'error', text: e.message || 'An error occurred' });
+    } finally {
+      setIsSavingUser(false);
     }
     setTimeout(() => setStatusMsg(null), 3000);
   };
@@ -2208,19 +2217,29 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                 <p className="text-[8px] font-medium text-slate-600 ml-2">Modifying this value directly changes or grants the user's available balance.</p>
               </div>
 
+              {modalError && (
+                <div id="modal-error-notice" className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-center text-[10px] font-black uppercase tracking-widest leading-relaxed">
+                  ⚠️ {modalError}
+                </div>
+              )}
+
               <div className="pt-4 flex gap-3">
                 <button 
+                  id="btn-edit-user-cancel"
                   type="button" 
+                  disabled={isSavingUser}
                   onClick={() => setEditingUser(null)}
-                  className="flex-1 py-4 rounded-2xl bg-white/5 text-slate-500 font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                  className="flex-1 py-4 rounded-2xl bg-white/5 text-slate-500 font-black uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button 
+                  id="btn-edit-user-submit"
                   type="submit"
-                  className="flex-3 py-4 rounded-2xl bg-emerald-500 text-black font-black uppercase tracking-widest hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all active:scale-95"
+                  disabled={isSavingUser}
+                  className="flex-3 py-4 rounded-2xl bg-emerald-500 text-black font-black uppercase tracking-widest hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all active:scale-95 disabled:bg-emerald-500/50 disabled:cursor-not-allowed"
                 >
-                  Save Changes
+                  {isSavingUser ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>
