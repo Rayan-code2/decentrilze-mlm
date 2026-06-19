@@ -811,7 +811,7 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
         const spinsEarned = Math.max(1, Math.floor(price / 10));
         await db.update(wallets).set({ availableSpins: sql`${wallets.availableSpins} + ${spinsEarned}` }).where(eq(wallets.userId, userId));
 
-        const firstYield = Number(((price * (pkg.dailyRoi || 0.5)) / 100).toFixed(4));
+        const firstYield = Number(((price * (pkg.dailyRoi !== undefined && pkg.dailyRoi !== null ? Number(pkg.dailyRoi) : 0.5)) / 100).toFixed(4));
         if (firstYield > 0) {
             await distributeIncomeServer(userId, firstYield, 'roi', `Instant yield for ${pkg.name}`, 'SYSTEM', 0, true);
         }
@@ -962,7 +962,7 @@ app.post('/api/distribute-roi', verifyAuth, async (req: any, res: any) => {
         let yieldsCount = 0;
         for (const p of activePurchases) {
             const price = Number(p.price);
-            const dailyPerc = Number(p.dailyRoi || 0.5);
+            const dailyPerc = p.dailyRoi !== undefined && p.dailyRoi !== null ? Number(p.dailyRoi) : 0.5;
             const cycleAmt = Number((price * dailyPerc / 100).toFixed(4));
             if (cycleAmt > 0) {
                 const isCredited = await distributeIncomeServer(resolvedId, cycleAmt, 'roi', `Manual User ROI`, 'SYSTEM', 0, false);
@@ -1327,7 +1327,7 @@ async function processPackageROI(p: any, settings: any): Promise<boolean> {
         const freshPkg = freshList[0];
 
         const price = Number(freshPkg.price);
-        const dailyPerc = Number(freshPkg.dailyRoi || 0.5);
+        const dailyPerc = freshPkg.dailyRoi !== undefined && freshPkg.dailyRoi !== null ? Number(freshPkg.dailyRoi) : 0.5;
         const maxRoiPercent = Number(freshPkg.maxRoiPercent || settings?.max_roi_percent || 200);
         const intervalMins = Number(freshPkg.roiIntervalMinutes || settings?.roi_interval_minutes || 1440);
         const cyclePayout = Number((price * dailyPerc / 100).toFixed(4));
