@@ -883,7 +883,7 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
             }
         }
 
-        let currLevelId = profile.matrixParentId || '1';
+        let currLevelId = profile.referredBy || '1';
         for (let l = 1; l <= Math.min(10, levelPercents.length); l++) {
             if (!currLevelId || currLevelId === '0' || currLevelId === userId) break;
             const depthAmt = Number(levelPercents[l - 1] || 0);
@@ -892,7 +892,7 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
             }
             if (currLevelId === '1') break;
             const parentDoc = await fetchUserById(currLevelId);
-            currLevelId = parentDoc?.matrixParentId || '1';
+            currLevelId = parentDoc?.referredBy || '1';
         }
 
         await triggerBoostingServer(userId);
@@ -1104,6 +1104,16 @@ app.post('/api/admin/update-user', verifyAdmin, async (req: any, res: any) => {
         if (data.role !== undefined) payload.role = data.role;
         if (data.password !== undefined && data.password !== '') {
             payload.password = hashPassword(data.password);
+        }
+        if (data.referredBy !== undefined || data.referred_by !== undefined) {
+            const val = data.referredBy !== undefined ? data.referredBy : data.referred_by;
+            const resolvedSponsor = await resolveUserAuthId(val);
+            payload.referredBy = resolvedSponsor || val;
+        }
+        if (data.matrixParentId !== undefined || data.matrix_parent_id !== undefined) {
+            const val = data.matrixParentId !== undefined ? data.matrixParentId : data.matrix_parent_id;
+            const resolvedParent = await resolveUserAuthId(val);
+            payload.matrixParentId = resolvedParent || val;
         }
         await db.update(users).set(payload).where(eq(users.uid, resolvedId));
         res.json({ success: true, message: 'User updated successfully' });

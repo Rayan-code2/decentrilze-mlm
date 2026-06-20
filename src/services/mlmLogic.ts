@@ -18,6 +18,12 @@ export async function resolveUserAuthId(identifier: any): Promise<string | null>
     const userByNode = await db.select().from(users).where(eq(users.nodeId, strId)).limit(1);
     if (userByNode.length > 0) return userByNode[0].uid;
 
+    // 2b. Check by Email
+    if (strId.includes('@')) {
+      const userByEmail = await db.select().from(users).where(eq(users.email, strId)).limit(1);
+      if (userByEmail.length > 0) return userByEmail[0].uid;
+    }
+
     // 3. Check by Drizzle numeric primary id
     if (/^\d+$/.test(strId)) {
       const userById = await db.select().from(users).where(eq(users.id, parseInt(strId, 10))).limit(1);

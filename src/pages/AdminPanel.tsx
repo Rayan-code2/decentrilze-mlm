@@ -304,6 +304,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
     const personalBusiness = formData.get('personalBusiness') ? Number(formData.get('personalBusiness')) : undefined;
     const teamBusiness = formData.get('teamBusiness') ? Number(formData.get('teamBusiness')) : undefined;
     const userIsActive = formData.get('userIsActive') !== null;
+    const userReferredBy = formData.get('userReferredBy') as string;
+    const userMatrixParentId = formData.get('userMatrixParentId') as string;
     const walletBalanceRaw = formData.get('userWalletBalance');
     const walletBalance = (walletBalanceRaw !== null && walletBalanceRaw !== '') ? Number(walletBalanceRaw) : undefined;
 
@@ -321,7 +323,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
         team_business: teamBusiness,
         mobile: mobile,
         role: newRole,
-        isActive: userIsActive
+        isActive: userIsActive,
+        referredBy: userReferredBy,
+        matrixParentId: userMatrixParentId,
       });
 
       if (res.success && walletBalance !== undefined && !isNaN(walletBalance)) {
@@ -2311,6 +2315,29 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                   <option value="user" className="bg-slate-900 text-white">User (Standard)</option>
                   <option value="admin" className="bg-slate-900 text-white">Admin (Full Control)</option>
                 </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-2">Sponsor/Referrer (UID, email or ID)</label>
+                  <input 
+                    name="userReferredBy"
+                    type="text" 
+                    defaultValue={editingUser.referredBy || editingUser.referred_by || ''}
+                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:border-emerald-500/50 outline-none transition-colors"
+                    placeholder="e.g. sita@gmail.com, 1"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-2">Matrix Parent (UID, email or ID)</label>
+                  <input 
+                    name="userMatrixParentId"
+                    type="text" 
+                    defaultValue={editingUser.matrixParentId || editingUser.matrix_parent_id || ''}
+                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:border-emerald-500/50 outline-none transition-colors"
+                    placeholder="e.g. sita@gmail.com, 1"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center gap-3 bg-black/20 p-4 rounded-2xl border border-white/5">
