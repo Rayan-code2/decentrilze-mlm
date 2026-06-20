@@ -310,7 +310,7 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
   const renderTreeNode = (node: any, label: string) => {
     if (!node) {
       return (
-        <div className="glass-card p-3 flex flex-col items-center justify-center border border-dashed border-white/10 opacity-30 min-h-[90px] w-full max-w-[130px] mx-auto text-center rounded-xl bg-slate-900/10">
+        <div className="glass-card p-3 flex flex-col items-center justify-center border border-dashed border-white/10 opacity-30 min-h-[105px] w-full max-w-[130px] mx-auto text-center rounded-xl bg-slate-900/10">
           <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest leading-none block">{label}</span>
           <div className="w-5 h-5 rounded bg-white/5 flex items-center justify-center text-slate-600 font-bold text-xs mt-1">
             +
@@ -321,6 +321,12 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
     }
     
     const isActiveUser = node.is_active;
+    const mParentId = node.matrix_parent_id || node.matrixParentId;
+    const mParentUser = networkUsers.find((u: any) => {
+      const uId = u.uid || u.user_id || u.id;
+      return uId && mParentId && String(uId).trim() === String(mParentId).trim();
+    });
+    const mParentDisplay = mParentUser ? `#${mParentUser.node_id}` : (mParentId === '1' ? 'ROOT' : 'NONE');
     
     return (
       <div 
@@ -328,7 +334,7 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
           setTreeRoot(node);
           setSearchError('');
         }}
-        className={`glass-card p-3 border ${isActiveUser ? 'border-electric/20 hover:border-electric ring-1 ring-electric/5' : 'border-white/5 hover:border-slate-500'} cursor-pointer transition-all duration-300 relative group flex flex-col justify-between min-h-[90px] w-full max-w-[130px] mx-auto shadow-md hover:shadow-xl bg-slate-950/70 rounded-xl hover:scale-105`}
+        className={`glass-card p-3 border ${isActiveUser ? 'border-electric/20 hover:border-electric ring-1 ring-electric/5' : 'border-white/5 hover:border-slate-500'} cursor-pointer transition-all duration-300 relative group flex flex-col justify-between min-h-[105px] w-full max-w-[130px] mx-auto shadow-md hover:shadow-xl bg-slate-950/70 rounded-xl hover:scale-105`}
         title="Click to zoom in or inspect deeper tree"
       >
         <div className="flex items-center justify-between pointer-events-none">
@@ -339,6 +345,7 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
         <div className="my-1 text-center pointer-events-none">
           <p className="text-[10px] font-black text-white truncate max-w-[110px] mx-auto uppercase tracking-tighter leading-snug">{node.name || node.email.split('@')[0]}</p>
           <p className="text-[7px] font-mono text-slate-muted uppercase block truncate leading-none mt-0.5">#{node.node_id || 'PENDING'}</p>
+          <p className="text-[7px] font-black text-amber-400 uppercase block truncate leading-none mt-1">Parent: {mParentDisplay}</p>
         </div>
         
         <div className="pt-1 border-t border-white/5 flex items-center justify-between text-[7px] font-bold uppercase pointer-events-none">
@@ -410,18 +417,9 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
         <div className="relative p-6 sm:p-10 rounded-[2.5rem] bg-slate-950/40 backdrop-blur-xl border border-white/5 shadow-[0_0_50px_rgba(204,255,0,0.02)] space-y-8">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-white/5">
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="w-2 h-2 rounded-full bg-electric animate-ping"></span>
-                <span className="text-[10px] font-black uppercase text-electric tracking-widest">Interactive Network Tree map</span>
-              </div>
-              <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">
-                Genealogy (Zoology) View Map
-              </h3>
-              <p className="text-[9px] font-bold text-slate-muted uppercase tracking-widest leading-none mt-1">
-                Currently exploring tree under:{' '}
-                <span className="text-white font-black">
-                  {(treeData.root.name || treeData.root.email.split('@')[0]).toUpperCase()} (Node: {treeData.root.node_id || 'PENDING'})
-                </span>
+              <p className="text-[10px] font-black uppercase text-electric tracking-widest flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-electric animate-pulse"></span>
+                Exploring Matrix tree: <span className="text-white font-black">{(treeData.root.name || treeData.root.email.split('@')[0]).toUpperCase()} (Node: {treeData.root.node_id || 'PENDING'})</span>
               </p>
             </div>
             
@@ -640,7 +638,18 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
                   <p className="text-sm font-black text-white italic tracking-tight uppercase group-hover:text-electric transition-colors">{node.name || node.email.split('@')[0]}</p>
                   <div className="flex flex-col">
                     <p className="font-mono text-[9px] font-bold text-slate-muted uppercase tracking-widest">NODE_ID: #{node.node_id || 'PENDING'}</p>
-                    <p className="text-[8px] font-bold text-slate-500 uppercase tracking-[0.1em]">
+                    {(() => {
+                      const mParentId = node.matrix_parent_id || node.matrixParentId;
+                      const mParentUser = networkUsers.find((u: any) => {
+                        const uId = u.uid || u.user_id || u.id;
+                        return uId && mParentId && String(uId).trim() === String(mParentId).trim();
+                      });
+                      const mParentDisplay = mParentUser ? `#${mParentUser.node_id}` : (mParentId === '1' ? 'ROOT' : 'NONE');
+                      return (
+                        <p className="font-mono text-[9px] font-bold text-amber-400 uppercase tracking-widest mt-0.5">PARENT: {mParentDisplay}</p>
+                      );
+                    })()}
+                    <p className="text-[8px] font-bold text-slate-500 uppercase tracking-[0.1em] mt-0.5">
                       {activeTab === 'generations' 
                         ? `Generation ${Object.keys(generationDownlineUsers).find(lvl => generationDownlineUsers[Number(lvl)].some(u => u.id === node.id || (u.user_id && u.user_id === node.user_id))) || '?'}` 
                         : activeTab === 'matrix'
