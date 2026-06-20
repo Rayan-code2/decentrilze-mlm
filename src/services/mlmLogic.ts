@@ -188,7 +188,10 @@ export async function findGlobalMatrixParent(): Promise<string> {
       if (!u.isActive && u.uid !== '1') continue; // Only place under active accounts or root admin
       const children = await db.select()
         .from(users)
-        .where(eq(users.matrixParentId, u.uid));
+        .where(and(
+          eq(users.matrixParentId, u.uid),
+          eq(users.isActive, true)
+        ));
       
       if (children.length < 2) {
         return u.uid;

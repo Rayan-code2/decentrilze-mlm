@@ -419,15 +419,6 @@ app.post('/api/auth/register', async (req: any, res: any) => {
             if (sponsorResolved) resolvedSponsor = sponsorResolved;
         }
 
-        // Matrix parent
-        let matrixParentId = '1';
-        try {
-            const mp = await findGlobalMatrixParent();
-            if (mp) matrixParentId = mp;
-        } catch (mpErr) {
-            console.warn('[Register] Matrix parent lookup failed, using default:', mpErr);
-        }
-
         // Insert user
         const createdUsers = await db.insert(users).values({
             uid: generatedUid,
@@ -435,7 +426,7 @@ app.post('/api/auth/register', async (req: any, res: any) => {
             name: (name || '').trim(),
             role: 'user',
             referredBy: resolvedSponsor,
-            matrixParentId,
+            matrixParentId: null, // assigned dynamically when the user activates their first package
             nodeId,
             isActive: false,
             mobile: (mobile || '').trim(),
@@ -492,7 +483,7 @@ app.get('/api/user/profile/:userId', verifyAuth, async (req: any, res: any) => {
                 isActive: false,
                 directCount: 0,
                 referredBy: '1',
-                matrixParentId: '1',
+                matrixParentId: null,
             }).returning();
             profile = created[0];
         }
@@ -851,7 +842,20 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
         }
 
         if (!profile.isActive) {
-            await db.update(users).set({ isActive: true }).where(eq(users.uid, userId));
+            let assignedParent = '1';
+            try {
+                const mp = await findGlobalMatrixParent();
+                if (mp) assignedParent = mp;
+            } catch (parentErr) {
+                console.warn('[Activation] Matrix parent lookup failed, fallback to 1:', parentErr);
+            }
+
+            await db.update(users)
+                .set({ isActive: true, matrixParentId: assignedParent })
+                .where(eq(users.uid, userId));
+            
+            profile.isActive = true;
+            profile.matrixParentId = assignedParent;
         }
 
         const spinsEarned = Math.max(1, Math.floor(price / 10));
