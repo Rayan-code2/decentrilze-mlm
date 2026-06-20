@@ -61,10 +61,14 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
 
         // Map users to their active packages
         const usersWithPkgs = teamUsers.map(u => {
-          const userPurchases = teamPurchases.filter(p => (p.user_id === u.user_id || p.user_id === u.id));
+          const uId = String((u as any).uid || u.user_id || u.id || '').trim();
+          const userPurchases = teamPurchases.filter(p => {
+            const pUid = String(p.user_id || (p as any).userId || '').trim();
+            return pUid && pUid === uId;
+          });
           // Find the most expensive or latest active package
           const activePurchase = userPurchases.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0))[0];
-          const pkg = activePurchase ? allPkgs.find(p => p.id === activePurchase.package_id) : null;
+          const pkg = activePurchase ? allPkgs.find(p => String(p.id) === String(activePurchase.package_id || (activePurchase as any).packageId)) : null;
           return {
             ...u,
             is_active: !!pkg, // User is active if they have a package
