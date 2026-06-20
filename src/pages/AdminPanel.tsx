@@ -199,6 +199,37 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
     }
   };
 
+  const [matrixAlignMode, setMatrixAlignMode] = useState<'active_only' | 'all'>('active_only');
+  const [isAligningMatrix, setIsAligningMatrix] = useState(false);
+  const [matrixAlignStatus, setMatrixAlignStatus] = useState<string | null>(null);
+
+  const handleRealignMatrix = async () => {
+    if (!window.confirm(`Are you sure you want to realign the entire 2x2 matrix using ${matrixAlignMode === 'active_only' ? 'Active Members only' : 'All Registered Accounts'}? This will rebuild parent IDs to ensure a perfect binary sequence with zero empty spaces.`)) {
+      return;
+    }
+    setIsAligningMatrix(true);
+    setMatrixAlignStatus(null);
+    try {
+      const isLive = isAppwriteConfigured();
+      const res = isLive 
+        ? await appwriteService.realignMatrixTree(matrixAlignMode)
+        : { success: true, message: "Simulation Mode: Rebuilt perfect 2x2 matrix." };
+
+      if (res.success) {
+        setIsAligningMatrix(false);
+        setMatrixAlignStatus("Tree realigned successfully!");
+        setStatusMsg({ type: 'success', text: res.message || 'Matrix structure realigned successfully!' });
+        fetchData();
+      } else {
+        throw new Error(res.message || "Failed to realign tree.");
+      }
+    } catch (err: any) {
+      setIsAligningMatrix(false);
+      setMatrixAlignStatus(`Error: ${err.message}`);
+      setStatusMsg({ type: 'error', text: err.message || 'Realignment failed.' });
+    }
+  };
+
   const handleUpdateSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     const formElement = e.currentTarget as HTMLFormElement;
@@ -272,6 +303,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
     const newRole = formData.get('userRole') as string;
     const personalBusiness = formData.get('personalBusiness') ? Number(formData.get('personalBusiness')) : undefined;
     const teamBusiness = formData.get('teamBusiness') ? Number(formData.get('teamBusiness')) : undefined;
+    const userIsActive = formData.get('userIsActive') !== null;
     const walletBalanceRaw = formData.get('userWalletBalance');
     const walletBalance = (walletBalanceRaw !== null && walletBalanceRaw !== '') ? Number(walletBalanceRaw) : undefined;
 
@@ -288,7 +320,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
         personal_business: personalBusiness,
         team_business: teamBusiness,
         mobile: mobile,
-        role: newRole
+        role: newRole,
+        isActive: userIsActive
       });
 
       if (res.success && walletBalance !== undefined && !isNaN(walletBalance)) {
@@ -1664,7 +1697,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
         )}
 
         {activeTab === 'settings' && settings && (
-          <form key={`settings-${lastUpdated}`} onSubmit={handleUpdateSettings} className="p-8 space-y-8">
+          <>
+            <form key={`settings-${lastUpdated}`} onSubmit={handleUpdateSettings} className="p-8 space-y-8">
             {/* FEATURE TOGGLES */}
             <div className="bg-black/40 p-6 rounded-3xl border border-white/5 space-y-6">
               <div className="flex items-center gap-3 border-b border-white/5 pb-4">
@@ -1987,6 +2021,103 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
               </div>
             </div>
           </form>
+
+          {/* 2X2 MATRIX HEALING & REALIGNMENT TOOL */}
+          <div className="mt-8 bg-black/40 p-8 rounded-3xl border border-white/5 space-y-6">
+            <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+              <Database size={20} className="text-red-500" />
+              <h3 className="text-white font-black text-sm italic uppercase tracking-tighter">2x2 Matrix Optimization & Sequential Rebuilding</h3>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex gap-4 p-4 bg-red-950/20 border border-red-500/10 rounded-2xl">
+                <AlertTriangle className="text-red-500 shrink-0" size={24} />
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-red-400 uppercase tracking-wider">CRITICAL HEALING PROTOCOL (HINDI / ENGLISH)</p>
+                  <p className="text-[10px] text-slate-300">
+                    अगर आपके लाइव सिस्टम में यूज़र्स का सीक्वेंस (Level or Matrix parent) गलत हो गया है, तो इस टूल की मदद से आप पूरे पेड़ (Tree) को फिर से री-अलाइन करके एक सटीक 2x2 Binary Tree बना सकते हैं। 
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    If your live members got misaligned, this tool rebuilds and heals the database parent linkages (`matrixParentId`) chronologically upwards to ensure a perfect 2x2 binary structure with zero inactive gaps.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                <div className="space-y-3">
+                  <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">SELECT REALIGNMENT MODE</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setMatrixAlignMode('active_only')}
+                      className={`p-4 rounded-2xl border text-left transition-all ${
+                        matrixAlignMode === 'active_only'
+                          ? 'bg-red-500/10 border-red-500 text-white shadow-lg shadow-red-500/5'
+                          : 'bg-black/20 border-white/5 text-slate-400 hover:border-white/10 hover:text-white'
+                      }`}
+                    >
+                      <p className="text-xs font-black uppercase italic tracking-tight">Active Members Only</p>
+                      <p className="text-[8px] font-medium tracking-wide leading-relaxed mt-1 text-slate-500">
+                        (RECOMMENDED) Only fits active accounts in 2x2 levels. Eliminates inactive "gaps" so level commissions go upwards perfectly.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setMatrixAlignMode('all')}
+                      className={`p-4 rounded-2xl border text-left transition-all ${
+                        matrixAlignMode === 'all'
+                          ? 'bg-red-500/10 border-red-500 text-white shadow-lg shadow-red-500/5'
+                          : 'bg-black/20 border-white/5 text-slate-400 hover:border-white/10 hover:text-white'
+                      }`}
+                    >
+                      <p className="text-xs font-black uppercase italic tracking-tight">All Signups (With Inactives)</p>
+                      <p className="text-[8px] font-medium tracking-wide leading-relaxed mt-1 text-slate-500">
+                        Fits all registered accounts strictly in chronological sign-up order, regardless of package activation status.
+                      </p>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col justify-end p-6 bg-black/20 rounded-2xl border border-white/5 space-y-4">
+                  <div className="space-y-1">
+                    <p className="text-xs font-black text-white uppercase italic tracking-tight">Execute Re-Alignment</p>
+                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest leading-relaxed">
+                      This processes active IDs (e.g. 38 active IDs) and aligns their parentage globally in the database perfectly. This cannot be undone.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleRealignMatrix}
+                    disabled={isAligningMatrix}
+                    className="w-full flex items-center justify-center gap-3 py-4 px-6 rounded-xl bg-red-600 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-red-500 transition-all disabled:opacity-50 shadow-md active:scale-95"
+                  >
+                    {isAligningMatrix ? (
+                      <>
+                        <RefreshCcw size={14} className="animate-spin" />
+                        <span>Processing Realign...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Database size={14} />
+                        <span>⚡ Rebuild & Align Matrix Tree</span>
+                      </>
+                    )}
+                  </button>
+
+                  {matrixAlignStatus && (
+                    <p className={`text-[9px] font-bold uppercase tracking-wider text-center ${
+                      matrixAlignStatus.startsWith('Error') ? 'text-red-400' : 'text-emerald-400'
+                    }`}>
+                      {matrixAlignStatus}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+          </>
         )}
 
         {activeTab === 'boosting' && (
@@ -2182,6 +2313,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                 </select>
               </div>
 
+              <div className="flex items-center gap-3 bg-black/20 p-4 rounded-2xl border border-white/5">
+                <input 
+                  type="checkbox" 
+                  name="userIsActive"
+                  id="userIsActive"
+                  defaultChecked={editingUser.is_active || (editingUser as any).isActive}
+                  className="w-4 h-4 rounded border-white/10 bg-black/40 text-red-500 cursor-pointer"
+                />
+                <label htmlFor="userIsActive" className="text-[10px] font-black text-white uppercase tracking-widest cursor-pointer select-none">
+                  Active Member Status
+                </label>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-2">Reset Password (Optional)</label>
                 <input 
@@ -2280,8 +2424,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">{viewingUser.name}</h3>
-                  <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${viewingUser.is_active ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
-                    {viewingUser.is_active ? 'Active' : 'Inactive'}
+                  <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${
+                    (viewingUser.is_active || (viewingUser as any).isActive) 
+                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                      : 'bg-red-500/10 border-red-500/20 text-red-400'
+                  }`}>
+                    {(viewingUser.is_active || (viewingUser as any).isActive) ? 'Active' : 'Inactive'}
                   </span>
                 </div>
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{viewingUser.email}</p>

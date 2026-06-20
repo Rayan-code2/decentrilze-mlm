@@ -1084,6 +1084,7 @@ app.post('/api/admin/update-user', verifyAdmin, async (req: any, res: any) => {
         if (data.personal_business !== undefined) payload.personalBusiness = Number(data.personal_business);
         if (data.team_business !== undefined) payload.teamBusiness = Number(data.team_business);
         if (data.isBlocked !== undefined) payload.isBlocked = !!data.isBlocked;
+        if (data.isActive !== undefined) payload.isActive = !!data.isActive;
         if (data.role !== undefined) payload.role = data.role;
         if (data.password !== undefined && data.password !== '') {
             payload.password = hashPassword(data.password);
@@ -1358,6 +1359,75 @@ app.post('/api/admin/self-heal-schema', verifyAdmin, async (req: any, res: any) 
         res.json({ success: true, message: 'Cloud SQL database verified and healed' });
     } catch (e: any) {
         res.status(500).json({ success: false, message: cleanErrorMessage(e) });
+    }
+});
+
+// Realign Matrix Tree (Perfect 2x2 BFS Alignment)
+app.post('/api/admin/realign-matrix-tree', verifyAdmin, async (req: any, res: any) => {
+    const { mode } = req.body;
+    try {
+        console.log(`[Matrix Rebuild] Running matrix realign in mode: ${mode}`);
+        const list = await db.select().from(users).orderBy(asc(users.createdAt));
+        if (list.length === 0) {
+            return res.json({ success: true, message: 'No users found to realign.' });
+        }
+
+        const rootUser = list.find(u => u.uid === '1' || u.role === 'admin') || list[0];
+        let targetUsers: typeof list = [];
+
+        if (mode === 'active_only') {
+            targetUsers = list.filter(u => u.uid === rootUser.uid || u.isActive);
+            const inactiveUsers = list.filter(u => u.uid !== rootUser.uid && !u.isActive);
+            for (const inact of inactiveUsers) {
+                await db.update(users)
+                    .set({ matrixParentId: rootUser.uid })
+                    .where(eq(users.uid, inact.uid));
+            }
+        } else {
+            targetUsers = [...list];
+        }
+
+        targetUsers = targetUsers.filter(u => u.uid !== rootUser.uid);
+        targetUsers.unshift(rootUser);
+
+        for (const u of targetUsers) {
+            if (u.uid !== rootUser.uid) {
+                await db.update(users)
+                    .set({ matrixParentId: null })
+                    .where(eq(users.uid, u.uid));
+            }
+        }
+
+        const placementQueue: string[] = [rootUser.uid];
+        let parentIndex = 0;
+        const parentChildrenCount: Record<string, number> = {};
+
+        for (let i = 1; i < targetUsers.length; i++) {
+            const userToPlace = targetUsers[i];
+            while (parentIndex < placementQueue.length) {
+                const currentParent = placementQueue[parentIndex];
+                const currentCount = parentChildrenCount[currentParent] || 0;
+                if (currentCount < 2) {
+                    await db.update(users)
+                        .set({ matrixParentId: currentParent })
+                        .where(eq(users.uid, userToPlace.uid));
+                    parentChildrenCount[currentParent] = currentCount + 1;
+                    placementQueue.push(userToPlace.uid);
+                    break;
+                } else {
+                    parentIndex++;
+                }
+            }
+        }
+
+        console.log(`[Matrix Rebuild] Realigned ${targetUsers.length} users in ${mode} mode.`);
+        res.json({ 
+            success: true, 
+            message: `Perfect 2x2 matrix tree rebuilt successfully! Processed ${targetUsers.length} users with zero gaps.` 
+        });
+    } catch (err: any) {
+        console.error("[Matrix Rebuild Error]", err);
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
 

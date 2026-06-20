@@ -413,7 +413,7 @@ export const appwriteService = {
     }
   },
 
-  updateUser: async (userId: string, data: { name?: string, password?: string, personal_business?: number, team_business?: number, mobile?: string, role?: string }) => {
+  updateUser: async (userId: string, data: { name?: string, password?: string, personal_business?: number, team_business?: number, mobile?: string, role?: string, isActive?: boolean }) => {
     try {
       const response = await fetch('/api/admin/update-user', {
         method: 'POST',
@@ -547,6 +547,19 @@ export const appwriteService = {
       const response = await fetch('/api/admin/self-heal-schema', {
         method: 'POST',
         headers: await appwriteService.getAuthHeaders()
+      });
+      return await response.json();
+    } catch (error: any) {
+      return { success: false, message: error.message };
+    }
+  },
+
+  realignMatrixTree: async (mode: 'active_only' | 'all') => {
+    try {
+      const response = await fetch('/api/admin/realign-matrix-tree', {
+        method: 'POST',
+        headers: await appwriteService.getAuthHeaders(),
+        body: JSON.stringify({ mode })
       });
       return await response.json();
     } catch (error: any) {
