@@ -890,9 +890,9 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
             if (depthAmt > 0) {
                 await distributeIncomeServer(currLevelId, depthAmt, 'level_income', `Level ${l} commission: Node $${price} from ${profile.name}`, userId, l);
             }
+            if (currLevelId === '1') break;
             const parentDoc = await fetchUserById(currLevelId);
             currLevelId = parentDoc?.matrixParentId || '1';
-            if (currLevelId === '1') break;
         }
 
         await triggerBoostingServer(userId);
@@ -950,19 +950,35 @@ app.get('/api/admin/purchases', verifyAdmin, async (req: any, res: any) => {
     }
 });
 
-// Team Data
+// Team Data (Recursive Matrix & Referral Downline UPTO 10 LEVELS)
 app.get('/api/user/team-data/:userId', verifyAuth, async (req: any, res: any) => {
     const { userId } = req.params;
     try {
         const resolvedId = await resolveUserAuthId(userId) || userId;
-        const directUids = await db.select().from(users).where(eq(users.referredBy, resolvedId));
-        const directIds = directUids.map(u => u.uid);
-        let secondUids: any[] = [];
-        if (directIds.length > 0) {
-            secondUids = await db.select().from(users).where(sql`${users.referredBy} IN (${directIds.map(u => `'${u}'`).join(',')})`);
-        }
-        const teamUsers = [...directUids, ...secondUids];
-        const teamUids = teamUsers.map(u => u.uid);
+        const rawQueryResult = await db.execute(sql`
+            WITH RECURSIVE downline AS (
+                SELECT id, uid, email, name, role, is_active, referred_by, direct_count,
+                       is_qualified, is_blocked, matrix_parent_id, global_rank, node_id,
+                       personal_business, team_business, mobile, password, created_at, 1 as depth
+                FROM users
+                WHERE uid = ${resolvedId}
+
+                UNION ALL
+
+                SELECT u.id, u.uid, u.email, u.name, u.role, u.is_active, u.referred_by, u.direct_count,
+                       u.is_qualified, u.is_blocked, u.matrix_parent_id, u.global_rank, u.node_id,
+                       u.personal_business, u.team_business, u.mobile, u.password, u.created_at, d.depth + 1
+                FROM users u
+                INNER JOIN downline d ON (u.matrix_parent_id = d.uid OR u.referred_by = d.uid)
+                WHERE d.depth < 11
+            )
+            SELECT DISTINCT id, uid, email, name, role, is_active, referred_by, direct_count,
+                            is_qualified, is_blocked, matrix_parent_id, global_rank, node_id,
+                            personal_business, team_business, mobile, password, created_at
+            FROM downline;
+        `);
+        const teamUsers = (rawQueryResult.rows || rawQueryResult) as any[];
+        const teamUids = teamUsers.map(u => u.uid).filter(Boolean);
         let teamPurchases: any[] = [];
         if (teamUids.length > 0) {
             const rawPurchases = await db.select().from(purchases).where(sql`${purchases.userId} IN (${teamUids.map(u => `'${u}'`).join(',')})`);
