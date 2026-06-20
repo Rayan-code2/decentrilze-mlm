@@ -460,7 +460,7 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
           )}
 
           {/* Graphical Representation of binary tree */}
-          <div className="w-full overflow-x-auto select-none pb-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+            <div className="w-full overflow-x-auto select-none pb-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
             {/* Mobile swipe helper badge */}
             <div className="flex justify-center lg:hidden mb-4">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-electric/10 border border-electric/20 rounded-full text-[9px] font-black uppercase text-electric tracking-widest animate-pulse">
@@ -468,41 +468,67 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
               </span>
             </div>
 
-            <div className="relative py-8 min-w-[760px] mx-auto overflow-hidden">
+            <div className="relative py-8 w-[780px] mx-auto flex-shrink-0">
               {/* SVG Connector Lines */}
-              <svg className="absolute inset-x-0 top-0 h-full w-full pointer-events-none z-0 opacity-20" style={{ minWidth: '760px' }}>
+              <svg className="absolute inset-x-0 top-0 h-full w-full pointer-events-none z-0 opacity-20" style={{ width: '780px' }}>
                 {/* Lines from Root to L1 Children */}
-                <line x1="50%" y1="52" x2="25%" y2="162" stroke="#CCFF00" strokeWidth="2" strokeDasharray="4" />
-                <line x1="50%" y1="52" x2="75%" y2="162" stroke="#CCFF00" strokeWidth="2" strokeDasharray="4" />
+                <line x1="50%" y1="90" x2="25%" y2="154" stroke="#CCFF00" strokeWidth="2" strokeDasharray="4" />
+                <line x1="50%" y1="90" x2="75%" y2="154" stroke="#CCFF00" strokeWidth="2" strokeDasharray="4" />
 
                 {/* Lines from L1 Left Child to L2 Grandchildren */}
-                <line x1="25%" y1="212" x2="12.5%" y2="322" stroke="#CCFF00" strokeWidth="1.5" />
-                <line x1="25%" y1="212" x2="37.5%" y2="322" stroke="#CCFF00" strokeWidth="1.5" />
+                <line x1="25%" y1="244" x2="12.5%" y2="308" stroke="#CCFF00" strokeWidth="1.5" />
+                <line x1="25%" y1="244" x2="37.5%" y2="308" stroke="#CCFF00" strokeWidth="1.5" />
 
                 {/* Lines from L1 Right Child to L2 Grandchildren */}
-                <line x1="75%" y1="212" x2="62.5%" y2="322" stroke="#CCFF00" strokeWidth="1.5" />
-                <line x1="75%" y1="212" x2="87.5%" y2="322" stroke="#CCFF00" strokeWidth="1.5" />
+                <line x1="75%" y1="244" x2="62.5%" y2="308" stroke="#CCFF00" strokeWidth="1.5" />
+                <line x1="75%" y1="244" x2="87.5%" y2="308" stroke="#CCFF00" strokeWidth="1.5" />
               </svg>
 
               {/* Tree Nodes Container */}
               <div className="relative z-10 flex flex-col gap-16">
                 {/* Level 0: Root */}
-                <div className="flex justify-center h-[60px]">
-                  {renderTreeNode(treeData.root, 'Root Node')}
+                <div className="flex justify-center h-[90px] w-full">
+                  <div className="w-[130px] flex-shrink-0">
+                    {renderTreeNode(treeData.root, 'Root Node')}
+                  </div>
                 </div>
 
                 {/* Level 1: Left / Right Children */}
-                <div className="flex justify-between px-[12.5%] h-[60px]">
-                  <div className="w-[130px]">{renderTreeNode(treeData.leftChild, 'L-Child')}</div>
-                  <div className="w-[130px]">{renderTreeNode(treeData.rightChild, 'R-Child')}</div>
+                <div className="flex w-full h-[90px]">
+                  <div className="w-1/2 flex justify-center flex-shrink-0">
+                    <div className="w-[130px] flex-shrink-0">
+                      {renderTreeNode(treeData.leftChild, 'L-Child')}
+                    </div>
+                  </div>
+                  <div className="w-1/2 flex justify-center flex-shrink-0">
+                    <div className="w-[130px] flex-shrink-0">
+                      {renderTreeNode(treeData.rightChild, 'R-Child')}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Level 2: 4 Grandchildren */}
-                <div className="flex justify-between px-0 h-[60px]">
-                  <div className="w-[130px] flex justify-center">{renderTreeNode(treeData.leftLeftChild, 'LL-Grandchild')}</div>
-                  <div className="w-[130px] flex justify-center">{renderTreeNode(treeData.leftRightChild, 'LR-Grandchild')}</div>
-                  <div className="w-[130px] flex justify-center">{renderTreeNode(treeData.rightLeftChild, 'RL-Grandchild')}</div>
-                  <div className="w-[130px] flex justify-center">{renderTreeNode(treeData.rightRightChild, 'RR-Grandchild')}</div>
+                <div className="flex w-full h-[90px]">
+                  <div className="w-1/4 flex justify-center flex-shrink-0">
+                    <div className="w-[130px] flex-shrink-0">
+                      {renderTreeNode(treeData.leftLeftChild, 'LL-Grandchild')}
+                    </div>
+                  </div>
+                  <div className="w-1/4 flex justify-center flex-shrink-0">
+                    <div className="w-[130px] flex-shrink-0">
+                      {renderTreeNode(treeData.leftRightChild, 'LR-Grandchild')}
+                    </div>
+                  </div>
+                  <div className="w-1/4 flex justify-center flex-shrink-0">
+                    <div className="w-[130px] flex-shrink-0">
+                      {renderTreeNode(treeData.rightLeftChild, 'RL-Grandchild')}
+                    </div>
+                  </div>
+                  <div className="w-1/4 flex justify-center flex-shrink-0">
+                    <div className="w-[130px] flex-shrink-0">
+                      {renderTreeNode(treeData.rightRightChild, 'RR-Grandchild')}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
