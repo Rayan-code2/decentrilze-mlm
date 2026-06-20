@@ -39,7 +39,8 @@ export async function resolveUserAuthId(identifier: any): Promise<string | null>
 // Fetch user profile from Postgres
 export async function fetchUserById(userId: string) {
   try {
-    const list = await db.select().from(users).where(eq(users.uid, userId)).limit(1);
+    const resolvedId = await resolveUserAuthId(userId) || userId;
+    const list = await db.select().from(users).where(eq(users.uid, resolvedId)).limit(1);
     return list[0] || null;
   } catch (err) {
     console.error(`[fetchUserById Error] userId: ${userId}`, err);

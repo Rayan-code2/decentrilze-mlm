@@ -883,7 +883,7 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
             }
         }
 
-        let currLevelId = profile.referredBy || '1';
+        let currLevelId = profile.matrixParentId || '1';
         for (let l = 1; l <= Math.min(10, levelPercents.length); l++) {
             if (!currLevelId || currLevelId === '0' || currLevelId === userId) break;
             const depthAmt = Number(levelPercents[l - 1] || 0);
@@ -892,7 +892,7 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
             }
             if (currLevelId === '1') break;
             const parentDoc = await fetchUserById(currLevelId);
-            currLevelId = parentDoc?.referredBy || '1';
+            currLevelId = parentDoc?.matrixParentId || '1';
         }
 
         await triggerBoostingServer(userId);
