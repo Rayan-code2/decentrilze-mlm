@@ -460,41 +460,50 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
           )}
 
           {/* Graphical Representation of binary tree */}
-          <div className="relative py-8 overflow-x-auto select-none min-w-[700px]">
-            {/* SVG Connector Lines */}
-            <svg className="absolute inset-x-0 top-0 h-full w-full pointer-events-none z-0 opacity-20" style={{ minWidth: '700px' }}>
-              {/* Lines from Root to L1 Children */}
-              <line x1="50%" y1="52" x2="25%" y2="162" stroke="#CCFF00" strokeWidth="2" strokeDasharray="4" />
-              <line x1="50%" y1="52" x2="75%" y2="162" stroke="#CCFF00" strokeWidth="2" strokeDasharray="4" />
+          <div className="w-full overflow-x-auto select-none pb-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+            {/* Mobile swipe helper badge */}
+            <div className="flex justify-center lg:hidden mb-4">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-electric/10 border border-electric/20 rounded-full text-[9px] font-black uppercase text-electric tracking-widest animate-pulse">
+                ↔ Swipe left/right to view full tree ↔
+              </span>
+            </div>
 
-              {/* Lines from L1 Left Child to L2 Grandchildren */}
-              <line x1="25%" y1="212" x2="12.5%" y2="322" stroke="#CCFF00" strokeWidth="1.5" />
-              <line x1="25%" y1="212" x2="37.5%" y2="322" stroke="#CCFF00" strokeWidth="1.5" />
+            <div className="relative py-8 min-w-[760px] mx-auto overflow-hidden">
+              {/* SVG Connector Lines */}
+              <svg className="absolute inset-x-0 top-0 h-full w-full pointer-events-none z-0 opacity-20" style={{ minWidth: '760px' }}>
+                {/* Lines from Root to L1 Children */}
+                <line x1="50%" y1="52" x2="25%" y2="162" stroke="#CCFF00" strokeWidth="2" strokeDasharray="4" />
+                <line x1="50%" y1="52" x2="75%" y2="162" stroke="#CCFF00" strokeWidth="2" strokeDasharray="4" />
 
-              {/* Lines from L1 Right Child to L2 Grandchildren */}
-              <line x1="75%" y1="212" x2="62.5%" y2="322" stroke="#CCFF00" strokeWidth="1.5" />
-              <line x1="75%" y1="212" x2="87.5%" y2="322" stroke="#CCFF00" strokeWidth="1.5" />
-            </svg>
+                {/* Lines from L1 Left Child to L2 Grandchildren */}
+                <line x1="25%" y1="212" x2="12.5%" y2="322" stroke="#CCFF00" strokeWidth="1.5" />
+                <line x1="25%" y1="212" x2="37.5%" y2="322" stroke="#CCFF00" strokeWidth="1.5" />
 
-            {/* Tree Nodes Container */}
-            <div className="relative z-10 flex flex-col gap-16">
-              {/* Level 0: Root */}
-              <div className="flex justify-center h-[60px]">
-                {renderTreeNode(treeData.root, 'Root Node')}
-              </div>
+                {/* Lines from L1 Right Child to L2 Grandchildren */}
+                <line x1="75%" y1="212" x2="62.5%" y2="322" stroke="#CCFF00" strokeWidth="1.5" />
+                <line x1="75%" y1="212" x2="87.5%" y2="322" stroke="#CCFF00" strokeWidth="1.5" />
+              </svg>
 
-              {/* Level 1: Left / Right Children */}
-              <div className="flex justify-between px-[12.5%] h-[60px]">
-                <div className="w-[130px]">{renderTreeNode(treeData.leftChild, 'L-Child')}</div>
-                <div className="w-[130px]">{renderTreeNode(treeData.rightChild, 'R-Child')}</div>
-              </div>
+              {/* Tree Nodes Container */}
+              <div className="relative z-10 flex flex-col gap-16">
+                {/* Level 0: Root */}
+                <div className="flex justify-center h-[60px]">
+                  {renderTreeNode(treeData.root, 'Root Node')}
+                </div>
 
-              {/* Level 2: 4 Grandchildren */}
-              <div className="flex justify-between px-0 h-[60px]">
-                <div className="w-[130px] flex justify-center">{renderTreeNode(treeData.leftLeftChild, 'LL-Grandchild')}</div>
-                <div className="w-[130px] flex justify-center">{renderTreeNode(treeData.leftRightChild, 'LR-Grandchild')}</div>
-                <div className="w-[130px] flex justify-center">{renderTreeNode(treeData.rightLeftChild, 'RL-Grandchild')}</div>
-                <div className="w-[130px] flex justify-center">{renderTreeNode(treeData.rightRightChild, 'RR-Grandchild')}</div>
+                {/* Level 1: Left / Right Children */}
+                <div className="flex justify-between px-[12.5%] h-[60px]">
+                  <div className="w-[130px]">{renderTreeNode(treeData.leftChild, 'L-Child')}</div>
+                  <div className="w-[130px]">{renderTreeNode(treeData.rightChild, 'R-Child')}</div>
+                </div>
+
+                {/* Level 2: 4 Grandchildren */}
+                <div className="flex justify-between px-0 h-[60px]">
+                  <div className="w-[130px] flex justify-center">{renderTreeNode(treeData.leftLeftChild, 'LL-Grandchild')}</div>
+                  <div className="w-[130px] flex justify-center">{renderTreeNode(treeData.leftRightChild, 'LR-Grandchild')}</div>
+                  <div className="w-[130px] flex justify-center">{renderTreeNode(treeData.rightLeftChild, 'RL-Grandchild')}</div>
+                  <div className="w-[130px] flex justify-center">{renderTreeNode(treeData.rightRightChild, 'RR-Grandchild')}</div>
+                </div>
               </div>
             </div>
           </div>
