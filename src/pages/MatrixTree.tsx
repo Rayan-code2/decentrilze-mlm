@@ -22,6 +22,10 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
   const [whaleNodesCount, setWhaleNodesCount] = useState(0);
   const [packages, setPackages] = useState<MLMPackage[]>([]);
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
+  const [networkUsers, setNetworkUsers] = useState<User[]>([]);
+  const [treeRoot, setTreeRoot] = useState<User | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchError, setSearchError] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -184,6 +188,7 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
         setScalingNodesCount(scalings);
         setEliteNodesCount(elites);
         setWhaleNodesCount(whales);
+        setNetworkUsers(usersWithPkgs);
 
         // Update current user business stats locally for immediate display
         setCurrentUser(prev => ({
@@ -212,12 +217,141 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
     fetchData();
   }, [user.id, user.user_id, activeTab]);
 
+  const treeData = useMemo(() => {
+    const root = treeRoot || currentUser;
+    if (!root) return null;
+    
+    const rootId = root.uid || (root as any).user_id || root.id;
+    
+    // Find level 1
+    const l1Nodes = networkUsers.filter(u => {
+      const parentId = (u as any).matrix_parent_id || u.matrixParentId;
+      return parentId === rootId;
+    });
+    
+    const leftChild = l1Nodes[0] || null;
+    const rightChild = l1Nodes[1] || null;
+    
+    // Find level 2 (left child children)
+    let leftLeftChild: User | null = null;
+    let leftRightChild: User | null = null;
+    if (leftChild) {
+      const lcId = leftChild.uid || (leftChild as any).user_id || leftChild.id;
+      const lcChildren = networkUsers.filter(u => {
+        const parentId = (u as any).matrix_parent_id || u.matrixParentId;
+        return parentId === lcId;
+      });
+      leftLeftChild = lcChildren[0] || null;
+      leftRightChild = lcChildren[1] || null;
+    }
+    
+    // Find level 2 (right child children)
+    let rightLeftChild: User | null = null;
+    let rightRightChild: User | null = null;
+    if (rightChild) {
+      const rcId = rightChild.uid || (rightChild as any).user_id || rightChild.id;
+      const rcChildren = networkUsers.filter(u => {
+        const parentId = (u as any).matrix_parent_id || u.matrixParentId;
+        return parentId === rcId;
+      });
+      rightLeftChild = rcChildren[0] || null;
+      rightRightChild = rcChildren[1] || null;
+    }
+    
+    return {
+      root,
+      leftChild,
+      rightChild,
+      leftLeftChild,
+      leftRightChild,
+      rightLeftChild,
+      rightRightChild
+    };
+  }, [treeRoot, currentUser, networkUsers]);
+
   const filteredDownline = useMemo(() => {
     if (statusTab === 'all') return downline;
     if (statusTab === 'active') return downline.filter(u => u.is_active === true);
     if (statusTab === 'inactive') return downline.filter(u => u.is_active === false);
     return downline;
   }, [downline, statusTab]);
+
+  const handleTreeSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearchError('');
+    if (!searchQuery.trim()) return;
+    
+    const query = searchQuery.trim().toLowerCase();
+    
+    // Find in networkUsers
+    const found = networkUsers.find(u => {
+      const uidVal = String(u.uid || (u as any).user_id || u.id || '').toLowerCase();
+      const nodeIdVal = String(u.node_id || '').toLowerCase();
+      const emailVal = String(u.email || '').toLowerCase();
+      const nameVal = String(u.name || '').toLowerCase();
+      
+      return uidVal === query || nodeIdVal === query || emailVal === query || nameVal === query || nodeIdVal === '#' + query;
+    });
+    
+    if (found) {
+      setTreeRoot(found);
+      setSearchQuery('');
+    } else {
+      setSearchError('User node not found in your downline database network');
+    }
+  };
+
+  const handleResetTree = () => {
+    setTreeRoot(null);
+    setSearchQuery('');
+    setSearchError('');
+  };
+
+  const renderTreeNode = (node: any, label: string) => {
+    if (!node) {
+      return (
+        <div className="glass-card p-3 flex flex-col items-center justify-center border border-dashed border-white/10 opacity-30 min-h-[90px] w-full max-w-[130px] mx-auto text-center rounded-xl bg-slate-900/10">
+          <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest leading-none block">{label}</span>
+          <div className="w-5 h-5 rounded bg-white/5 flex items-center justify-center text-slate-600 font-bold text-xs mt-1">
+            +
+          </div>
+          <p className="text-[7px] font-bold text-slate-600 mt-1 uppercase leading-none block">Vacant</p>
+        </div>
+      );
+    }
+    
+    const isActiveUser = node.is_active;
+    
+    return (
+      <div 
+        onClick={() => {
+          setTreeRoot(node);
+          setSearchError('');
+        }}
+        className={`glass-card p-3 border ${isActiveUser ? 'border-electric/20 hover:border-electric ring-1 ring-electric/5' : 'border-white/5 hover:border-slate-500'} cursor-pointer transition-all duration-300 relative group flex flex-col justify-between min-h-[90px] w-full max-w-[130px] mx-auto shadow-md hover:shadow-xl bg-slate-950/70 rounded-xl hover:scale-105`}
+        title="Click to zoom in or inspect deeper tree"
+      >
+        <div className="flex items-center justify-between pointer-events-none">
+          <span className="text-[7px] font-black text-electric uppercase tracking-widest bg-electric/10 px-1 rounded-sm leading-none py-0.5">{label}</span>
+          <div className={`w-1.5 h-1.5 rounded-full ${isActiveUser ? 'bg-crypto-up shadow-[0_0_8px_#10B981]' : 'bg-crypto-down'}`}></div>
+        </div>
+        
+        <div className="my-1 text-center pointer-events-none">
+          <p className="text-[10px] font-black text-white truncate max-w-[110px] mx-auto uppercase tracking-tighter leading-snug">{node.name || node.email.split('@')[0]}</p>
+          <p className="text-[7px] font-mono text-slate-muted uppercase block truncate leading-none mt-0.5">#{node.node_id || 'PENDING'}</p>
+        </div>
+        
+        <div className="pt-1 border-t border-white/5 flex items-center justify-between text-[7px] font-bold uppercase pointer-events-none">
+          <span className={isActiveUser ? 'text-amber-400' : 'text-slate-500'}>
+            {isActiveUser ? (node.active_package === 'NO PACKAGE' ? 'Synced' : node.active_package) : 'Inactive'}
+          </span>
+          <span className="text-electric hover:underline text-[6px] font-black bg-electric/10 px-1 py-0.5 rounded-xs leading-none">
+            Zoom
+          </span>
+        </div>
+      </div>
+    );
+  };
 
   if (loading) return (
     <div className="flex items-center justify-center h-96">
@@ -270,6 +404,108 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
           </div>
         </div>
       </div>
+
+      {/* GENEALOGY (ZOOLOGY) VIEW MAP */}
+      {treeData && (
+        <div className="relative p-6 sm:p-10 rounded-[2.5rem] bg-slate-950/40 backdrop-blur-xl border border-white/5 shadow-[0_0_50px_rgba(204,255,0,0.02)] space-y-8">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-white/5">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="w-2 h-2 rounded-full bg-electric animate-ping"></span>
+                <span className="text-[10px] font-black uppercase text-electric tracking-widest">Interactive Network Tree map</span>
+              </div>
+              <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">
+                Genealogy (Zoology) View Map
+              </h3>
+              <p className="text-[9px] font-bold text-slate-muted uppercase tracking-widest leading-none mt-1">
+                Currently exploring tree under:{' '}
+                <span className="text-white font-black">
+                  {(treeData.root.name || treeData.root.email.split('@')[0]).toUpperCase()} (Node: {treeData.root.node_id || 'PENDING'})
+                </span>
+              </p>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-3">
+              <form onSubmit={handleTreeSearch} className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Search Email, UID, or Node ID..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-black/50 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold text-white focus:outline-none focus:border-electric/50 min-w-[200px]"
+                />
+                <button 
+                  type="submit" 
+                  className="px-4 py-2 bg-electric hover:bg-electric/90 text-obsidian text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-[0_0_15px_rgba(204,255,0,0.2)]"
+                >
+                  Search Node
+                </button>
+              </form>
+              
+              {treeRoot && (
+                <button 
+                  onClick={handleResetTree}
+                  className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all border border-white/10"
+                >
+                  Reset to Me
+                </button>
+              )}
+            </div>
+          </div>
+
+          {searchError && (
+            <p className="text-xs font-black text-rose-500 uppercase tracking-widest text-center py-2 bg-rose-500/10 rounded-xl border border-rose-500/20">
+              ⚠️ {searchError}
+            </p>
+          )}
+
+          {/* Graphical Representation of binary tree */}
+          <div className="relative py-8 overflow-x-auto select-none min-w-[700px]">
+            {/* SVG Connector Lines */}
+            <svg className="absolute inset-x-0 top-0 h-full w-full pointer-events-none z-0 opacity-20" style={{ minWidth: '700px' }}>
+              {/* Lines from Root to L1 Children */}
+              <line x1="50%" y1="52" x2="25%" y2="162" stroke="#CCFF00" strokeWidth="2" strokeDasharray="4" />
+              <line x1="50%" y1="52" x2="75%" y2="162" stroke="#CCFF00" strokeWidth="2" strokeDasharray="4" />
+
+              {/* Lines from L1 Left Child to L2 Grandchildren */}
+              <line x1="25%" y1="212" x2="12.5%" y2="322" stroke="#CCFF00" strokeWidth="1.5" />
+              <line x1="25%" y1="212" x2="37.5%" y2="322" stroke="#CCFF00" strokeWidth="1.5" />
+
+              {/* Lines from L1 Right Child to L2 Grandchildren */}
+              <line x1="75%" y1="212" x2="62.5%" y2="322" stroke="#CCFF00" strokeWidth="1.5" />
+              <line x1="75%" y1="212" x2="87.5%" y2="322" stroke="#CCFF00" strokeWidth="1.5" />
+            </svg>
+
+            {/* Tree Nodes Container */}
+            <div className="relative z-10 flex flex-col gap-16">
+              {/* Level 0: Root */}
+              <div className="flex justify-center h-[60px]">
+                {renderTreeNode(treeData.root, 'Root Node')}
+              </div>
+
+              {/* Level 1: Left / Right Children */}
+              <div className="flex justify-between px-[12.5%] h-[60px]">
+                <div className="w-[130px]">{renderTreeNode(treeData.leftChild, 'L-Child')}</div>
+                <div className="w-[130px]">{renderTreeNode(treeData.rightChild, 'R-Child')}</div>
+              </div>
+
+              {/* Level 2: 4 Grandchildren */}
+              <div className="flex justify-between px-0 h-[60px]">
+                <div className="w-[130px] flex justify-center">{renderTreeNode(treeData.leftLeftChild, 'LL-Grandchild')}</div>
+                <div className="w-[130px] flex justify-center">{renderTreeNode(treeData.leftRightChild, 'LR-Grandchild')}</div>
+                <div className="w-[130px] flex justify-center">{renderTreeNode(treeData.rightLeftChild, 'RL-Grandchild')}</div>
+                <div className="w-[130px] flex justify-center">{renderTreeNode(treeData.rightRightChild, 'RR-Grandchild')}</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="pt-4 border-t border-white/5 text-center">
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
+              💡 Tip: Click on any active member card inside the tree map to set them as root and explore their personal network tree downstream!
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Network Health & Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

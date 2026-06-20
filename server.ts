@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import { db } from './src/db/index.ts';
 import { users, wallets, mlmPackages, purchases, transactions, exchangerRequests, goldQueue, settingsTable } from './src/db/schema.ts';
-import { eq, or, desc, asc, and, not, sql } from 'drizzle-orm';
+import { eq, or, desc, asc, and, not, sql, inArray } from 'drizzle-orm';
 import {
     resolveUserAuthId,
     fetchUserById,
@@ -985,7 +985,7 @@ app.get('/api/user/team-data/:userId', verifyAuth, async (req: any, res: any) =>
         const teamUids = teamUsers.map(u => u.uid).filter(Boolean);
         let teamPurchases: any[] = [];
         if (teamUids.length > 0) {
-            const rawPurchases = await db.select().from(purchases).where(sql`${purchases.userId} IN (${teamUids.map(u => `'${u}'`).join(',')})`);
+            const rawPurchases = await db.select().from(purchases).where(inArray(purchases.userId, teamUids));
             teamPurchases = rawPurchases.map(normalizePurchase);
         }
         res.json({ success: true, users: teamUsers.map(sanitizeUser), purchases: teamPurchases });

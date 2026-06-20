@@ -1,6 +1,6 @@
 import { db } from '../db/index.ts';
 import { users, wallets, mlmPackages, purchases, transactions, exchangerRequests, goldQueue, settingsTable } from '../db/schema.ts';
-import { eq, or, desc, asc, and, sql } from 'drizzle-orm';
+import { eq, or, desc, asc, and, sql, inArray } from 'drizzle-orm';
 
 // Helper: Resolve User Auth ID from either Auth ID, serial ID or Node ID
 export async function resolveUserAuthId(identifier: any): Promise<string | null> {
@@ -577,7 +577,7 @@ export async function calculateLevelBusiness(userId: string, depth: number): Pro
       
       const nextLevel = await db.select({ uid: users.uid })
         .from(users)
-        .where(sql`${users.referredBy} IN (${currentLevelUsers.map(u => `'${u}'`).join(',')})`);
+        .where(inArray(users.referredBy, currentLevelUsers));
       
       const uids = nextLevel.map(u => u.uid);
       allTargetRefUsers = allTargetRefUsers.concat(uids);
@@ -588,7 +588,7 @@ export async function calculateLevelBusiness(userId: string, depth: number): Pro
     if (allTargetRefUsers.length > 0) {
       const userPurchases = await db.select({ price: purchases.price })
         .from(purchases)
-        .where(sql`${purchases.userId} IN (${allTargetRefUsers.map(u => `'${u}'`).join(',')})`);
+        .where(inArray(purchases.userId, allTargetRefUsers));
       sponsorBiz = userPurchases.reduce((acc, p) => acc + Number(p.price), 0);
     }
     return sponsorBiz;
