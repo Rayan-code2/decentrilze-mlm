@@ -647,52 +647,11 @@ app.get('/api/packages', async (req: any, res: any) => {
             await db.insert(mlmPackages).values({ name: 'Whale Node', price: 40.0, dailyRoi: 0.4, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,2,2,3,3,3,4,4,15]' });
             list = await db.select().from(mlmPackages).orderBy(asc(mlmPackages.price));
         } else {
-            // Self-correction for existing databases to ensure standard rates
-            for (const pkg of list) {
-                const price = Math.floor(Number(pkg.price));
-                let correctPercents = '';
-                let correctName = '';
-                let correctDailyRoi = 0;
-                let correctDirect = 20.0;
-                let correctMatrix = 10.0;
-                
-                if (price === 10) {
-                    correctPercents = '[0.5,0.5,1,1,0.5,0.2,0.2,0.2,0.2,0.2]';
-                    correctName = 'Starter Node';
-                    correctDailyRoi = 0.1;
-                } else if (price === 20) {
-                    correctPercents = '[1,1,1,1,1,1,1,1,1,1]';
-                    correctName = 'Pro Node';
-                    correctDailyRoi = 0.2;
-                } else if (price === 30) {
-                    correctPercents = '[1,1,1,2,2,2,2,2,2,7]';
-                    correctName = 'Elite Node';
-                    correctDailyRoi = 0.3;
-                } else if (price === 40) {
-                    correctPercents = '[1,1,2,2,3,3,3,4,4,15]';
-                    correctName = 'Whale Node';
-                    correctDailyRoi = 0.4;
-                }
-                
-                if (correctPercents && (
-                    pkg.levelIncomePercents !== correctPercents || 
-                    pkg.name !== correctName || 
-                    pkg.directIncomePercent !== correctDirect || 
-                    pkg.matrixIncomePercent !== correctMatrix
-                )) {
-                    await db.update(mlmPackages)
-                        .set({ 
-                            levelIncomePercents: correctPercents,
-                            name: correctName,
-                            directIncomePercent: correctDirect,
-                            matrixIncomePercent: correctMatrix,
-                            dailyRoi: correctDailyRoi
-                        })
-                        .where(eq(mlmPackages.id, pkg.id));
-                }
+            // If 20, 30 or 40 are missing, insert them
+            const has20 = list.some(p => Math.floor(Number(p.price)) === 20);
+            if (!has20) {
+                await db.insert(mlmPackages).values({ name: 'Pro Node', price: 20.0, dailyRoi: 0.2, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,1,1,1,1,1,1,1]' });
             }
-            
-            // If 30 or 40 are missing, insert them
             const has30 = list.some(p => Math.floor(Number(p.price)) === 30);
             if (!has30) {
                 await db.insert(mlmPackages).values({ name: 'Elite Node', price: 30.0, dailyRoi: 0.3, roiIntervalMinutes: 1440, maxRoiPercent: 1000.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,2,2,2,2,2,2,7]' });
@@ -702,7 +661,7 @@ app.get('/api/packages', async (req: any, res: any) => {
                 await db.insert(mlmPackages).values({ name: 'Whale Node', price: 40.0, dailyRoi: 0.4, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,2,2,3,3,3,4,4,15]' });
             }
             
-            if (!has30 || !has40) {
+            if (!has20 || !has30 || !has40) {
                 list = await db.select().from(mlmPackages).orderBy(asc(mlmPackages.price));
             }
         }

@@ -1594,36 +1594,47 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-red-500">Reward Configuration (12 Segments)</h4>
-              <div className="grid grid-cols-1 gap-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-red-500">Reward Configuration (12 Segments)</h4>
+                {(() => {
+                  const sumProb = (settings.spin_rewards || []).reduce((acc: number, r: any) => acc + (Number(r.probability) || 0), 0);
+                  return (
+                    <div className="text-[10px] font-black uppercase tracking-widest">
+                      Total Probability Sum: <span className={sumProb === 100 ? "text-emerald-400" : "text-amber-400 animate-pulse"}>{sumProb.toFixed(2)}%</span> (Needs to be 100%)
+                    </div>
+                  );
+                })()}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Ensure we always show 12 rows */}
                 {[...Array(12)].map((_, index) => {
-                  const reward = (settings.spin_rewards || [])[index] || { id: `fixed_${index}`, label: '0', amount: 0, probability: 0 };
-                  const isTextField = (index + 1) % 3 === 0;
+                  const reward = (settings.spin_rewards || [])[index] || { id: `fixed_${index}`, label: `${index + 1}`, amount: 0, probability: 0 };
 
                   return (
-                    <div key={reward.id} className="p-4 bg-white/5 rounded-2xl border border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                      <div className="space-y-2">
-                        <label className="text-[8px] font-black uppercase tracking-widest text-slate-600 ml-1">
-                          Segment {index + 1} - {isTextField ? 'Custom Text' : 'Prize Amount ($)'}
-                        </label>
-                        {isTextField ? (
+                    <div key={reward.id || index} className="p-4 bg-white/5 rounded-2xl border border-white/10 flex flex-col gap-3">
+                      <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400">Segment {index + 1}</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[8px] font-black uppercase tracking-widest text-slate-500 ml-1">Label (Text)</label>
                           <input 
                             type="text"
                             value={reward.label}
                             onChange={(e) => {
                               const newRewards = [...(settings.spin_rewards || [])];
                               while (newRewards.length <= index) {
-                                newRewards.push({ id: `fixed_${newRewards.length}`, label: 'VOID', amount: 0, probability: 0 });
+                                newRewards.push({ id: `fixed_${newRewards.length}`, label: '0', amount: 0, probability: 0 });
                               }
                               newRewards[index].label = e.target.value;
-                              newRewards[index].amount = 0; // Force amount to 0 for text slots
                               setSettings({ ...settings, spin_rewards: newRewards });
                             }}
-                            className="w-full bg-black border border-white/10 rounded-lg py-2 px-3 text-xs text-white"
-                            placeholder="Enter text (e.g. Try Again)"
+                            className="w-full bg-black border border-white/10 rounded-lg py-1.5 px-2 text-xs text-white"
+                            placeholder="e.g. 10$, JACKPOT"
                           />
-                        ) : (
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[8px] font-black uppercase tracking-widest text-slate-500 ml-1">USDT Payout</label>
                           <input 
                             type="number"
                             step="any"
@@ -1634,35 +1645,34 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                                 newRewards.push({ id: `fixed_${newRewards.length}`, label: '0', amount: 0, probability: 0 });
                               }
                               newRewards[index].amount = Number(e.target.value);
-                              newRewards[index].label = `${e.target.value}$`;
                               setSettings({ ...settings, spin_rewards: newRewards });
                             }}
-                            className="w-full bg-black border border-white/10 rounded-lg py-2 px-3 text-xs text-white"
+                            className="w-full bg-black border border-white/10 rounded-lg py-1.5 px-2 text-xs text-white"
                           />
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[8px] font-black uppercase tracking-widest text-slate-600 ml-1">Winning Chance (%)</label>
-                        <input 
-                          type="number"
-                          step="any"
-                          value={reward.probability}
-                          onChange={(e) => {
-                            const newRewards = [...(settings.spin_rewards || [])];
-                            while (newRewards.length <= index) {
-                              newRewards.push({ id: `fixed_${newRewards.length}`, label: '0', amount: 0, probability: 0 });
-                            }
-                            newRewards[index].probability = Number(e.target.value);
-                            setSettings({ ...settings, spin_rewards: newRewards });
-                          }}
-                          className="w-full bg-black border border-white/10 rounded-lg py-2 px-3 text-xs text-white"
-                        />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[8px] font-black uppercase tracking-widest text-slate-500 ml-1">Chance (%)</label>
+                          <input 
+                            type="number"
+                            step="any"
+                            value={reward.probability}
+                            onChange={(e) => {
+                              const newRewards = [...(settings.spin_rewards || [])];
+                              while (newRewards.length <= index) {
+                                newRewards.push({ id: `fixed_${newRewards.length}`, label: '0', amount: 0, probability: 0 });
+                              }
+                              newRewards[index].probability = Number(e.target.value);
+                              setSettings({ ...settings, spin_rewards: newRewards });
+                            }}
+                            className="w-full bg-black border border-white/10 rounded-lg py-1.5 px-2 text-xs text-white"
+                          />
+                        </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
-              <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest text-center">Note: Total probability should ideally sum to 100%.</p>
+              <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest text-center mt-2">Note: Total probability of all segments MUST equal 100% for proper distributions.</p>
             </div>
 
             <div className="flex justify-end">
@@ -1672,7 +1682,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                     // Ensure exactly 12 rewards are saved
                     const finalRewards = (settings.spin_rewards || []).slice(0, 12);
                     while (finalRewards.length < 12) {
-                      finalRewards.push({ id: `fixed_${finalRewards.length}`, label: '0', amount: 0, probability: 0 });
+                      finalRewards.push({ id: `fixed_${finalRewards.length}`, label: `${finalRewards.length + 1}`, amount: 0, probability: 0 });
                     }
                     const updatedSettings = { ...settings, spin_rewards: finalRewards };
                     const isLive = isAppwriteConfigured();
