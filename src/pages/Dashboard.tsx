@@ -700,7 +700,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                     <div className="flex items-center gap-1.5 px-2 sm:px-4 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[7px] sm:text-[12px] font-black text-emerald-400 uppercase tracking-widest">
                       <ShieldCheck size={10} className="sm:size-4" />
-                      TRC-20 Network
+                      BEP-20 Network
                     </div>
                   </div>
                   <div className="flex items-center gap-3">

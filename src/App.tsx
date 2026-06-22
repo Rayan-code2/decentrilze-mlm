@@ -5,7 +5,7 @@ import { appwriteService } from './services/appwriteService';
 import { BRAND_CONFIG } from './brandConfig';
 import { MLM_CONFIG } from './constants';
 import { isAppwriteConfigured, client, APPWRITE_CONFIG, getEndpoint, getProjectId } from './lib/appwrite';
-import { AlertTriangle, LogOut, LayoutDashboard, Share2, Layers, Repeat, CheckSquare, History, Pickaxe, ShieldAlert, Send } from 'lucide-react';
+import { AlertTriangle, LogOut, LayoutDashboard, Share2, Layers, Repeat, CheckSquare, History, Pickaxe, ShieldAlert, Send, Download, Smartphone, X } from 'lucide-react';
 
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
@@ -19,7 +19,132 @@ import AdminPanel from './pages/AdminPanel';
 import SpinWheel from './pages/SpinWheel';
 import ResetPassword from './pages/ResetPassword';
 
-const InstallPrompt = () => null;
+const InstallPrompt: React.FC = () => {
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [isIos, setIsIos] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  useEffect(() => {
+    // Check if app is already inside standalone mode
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
+      || (window.navigator as any).standalone 
+      || document.referrer?.includes('android-app://');
+    
+    if (isStandalone) {
+      setIsInstalled(true);
+      return;
+    }
+
+    // Capture standard install trigger
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowPrompt(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Detect iOS to show helpful direct Share tips
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isIosDevice = /ipad|iphone|ipod/.test(userAgent) && !(window as any).MSStream;
+    setIsIos(isIosDevice);
+
+    // If on iOS and not standalone, show the instruction prompt after a short delay
+    if (isIosDevice && !isStandalone) {
+      const timer = setTimeout(() => {
+        setShowPrompt(true);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User response to install prompt: ${outcome}`);
+    
+    if (outcome === 'accepted') {
+      setIsInstalled(true);
+      setShowPrompt(false);
+    }
+    setDeferredPrompt(null);
+  };
+
+  if (isInstalled) return null;
+  if (!showPrompt) return null;
+
+  return (
+    <div className="fixed bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-96 z-[9999]">
+      <div className="relative p-5 rounded-3xl bg-black/90 backdrop-blur-xl border border-cyan-500/30 shadow-[0_0_30px_rgba(0,240,255,0.2)] overflow-hidden">
+        {/* Background ambient glow */}
+        <div className="absolute -right-10 -top-10 w-32 h-32 bg-cyan-500/20 rounded-full blur-2xl pointer-events-none"></div>
+        <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+        <button 
+          onClick={() => setShowPrompt(false)}
+          className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-all"
+        >
+          <X size={16} />
+        </button>
+
+        <div className="flex gap-4 items-start">
+          <div className="p-3 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl shadow-lg border border-cyan-400/30 flex-shrink-0 animate-pulse">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" className="w-8 h-8 text-white filter drop-shadow">
+              <polygon points="256,48 436,152 436,360 256,464 76,360 76,152" fill="none" stroke="currentColor" strokeWidth="24" />
+              <path d="M256,120 A136,136 0 1,1 120,256" fill="none" stroke="currentColor" strokeWidth="24" strokeLinecap="round" />
+              <circle cx="256" cy="256" r="32" fill="currentColor" />
+            </svg>
+          </div>
+
+          <div className="space-y-1">
+            <h4 className="text-sm font-black text-white tracking-wide uppercase">
+              Cryptospiral Web App
+            </h4>
+            <p className="text-xs text-slate-300 leading-relaxed font-semibold">
+              Apne smartphone par standard software ki trah install karke chalayein!
+            </p>
+            <p className="text-[10px] text-emerald-400 font-bold tracking-tight uppercase flex items-center gap-1 mt-1">
+              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"></span>
+              Fast Loading • Direct Access • Mobile Friendly
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-white/5 flex flex-col gap-2">
+          {isIos ? (
+            <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-xl p-2.5 text-[11px] text-cyan-300 space-y-1 font-semibold leading-relaxed">
+              <p className="flex items-center gap-1 text-white font-bold mb-1">
+                <span>🍎 iOS Users (Safari Browser):</span>
+              </p>
+              <p>
+                1. Tap karein <span className="underline font-bold px-1 py-0.5 bg-white/10 rounded">Share 🗎</span> (bottom menu me).
+              </p>
+              <p>
+                2. Phir select karein <span className="underline font-bold px-1 py-0.5 bg-white/10 rounded">Add to Home Screen ⊕</span> option.
+              </p>
+            </div>
+          ) : (
+            <button
+              onClick={handleInstallClick}
+              disabled={!deferredPrompt}
+              className="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-500 to-amber-500 hover:from-cyan-400 hover:to-amber-400 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30 active:scale-95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Download size={14} />
+              Install Application (Click here)
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Helper to get a stable deterministic rank for any given user ID or email
 const generateUserRank = (userId: string, email?: string): number => {
