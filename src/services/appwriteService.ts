@@ -18,7 +18,8 @@ export const appwriteService = {
       const response = await fetch(`/api/user/profile/${userId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
-        }
+        },
+        cache: 'no-store'
       });
       if (!response.ok) {
         localStorage.removeItem('spiral_user');
@@ -142,7 +143,10 @@ export const appwriteService = {
   getWallet: async (userId: string): Promise<Wallet | null> => {
     try {
       const headers = await appwriteService.getAuthHeaders();
-      const response = await fetch(`/api/user/wallet/${userId}`, { headers });
+      const response = await fetch(`/api/user/wallet/${userId}`, { 
+        headers,
+        cache: 'no-store'
+      });
       if (!response.ok) return null;
       const data = await response.json();
       return data.wallet;

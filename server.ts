@@ -274,6 +274,15 @@ if (process.env.PORT) {
 
 app.use(express.json());
 
+// Set Cache-Control headers for all API requests to prevent browser caching of live data (like balances)
+app.use('/api', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+    next();
+});
+
 // Middlewares
 const verifyAuth = async (req: any, res: any, next: any) => {
     try {
