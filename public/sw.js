@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cryptospiral-v1';
+const CACHE_NAME = 'cryptospiral-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -34,6 +34,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   // Only handle standard local http/https requests
   if (!event.request.url.startsWith(self.location.origin)) {
+    return;
+  }
+
+  // CRITICAL: Dev/API requests and non-GET requests must bypass Service Worker completely
+  if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
     return;
   }
   
