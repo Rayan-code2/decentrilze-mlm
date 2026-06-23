@@ -1225,7 +1225,7 @@ app.post('/api/exchanger/request', verifyAuth, async (req: any, res: any) => {
         }
 
         const cleanAddress = String(address || '').trim();
-        const cleanNetwork = String(network || 'BEP20').trim();
+        const cleanNetwork = String(network || 'TRC20').trim();
         const cleanUtrNumber = String(utrNumber || '').trim();
         const cleanInrAmount = inrAmount ? Number(inrAmount) : null;
         const cleanRate = rate ? Number(rate) : null;

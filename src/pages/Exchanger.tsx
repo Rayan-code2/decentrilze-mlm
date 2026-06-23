@@ -24,7 +24,7 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
   const [amount, setAmount] = useState('');
   const [utr, setUtr] = useState('');
   const [address, setAddress] = useState('');
-  const [network, setNetwork] = useState('BEP20');
+  const [network, setNetwork] = useState('TRC20');
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -148,9 +148,11 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
       }
 
       const currentAddress = requestType === 'deposit' 
-        ? (network === 'BEP20' 
-            ? settings?.admin_address_bep20 
-            : settings?.admin_address_erc20)
+        ? (network === 'TRC20' 
+            ? settings?.admin_address_trc20 
+            : network === 'BEP20' 
+              ? settings?.admin_address_bep20 
+              : settings?.admin_address_erc20)
         : address;
 
       const res = await api.createExchangerRequest({
@@ -203,7 +205,7 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
             <div className="space-y-4">
               <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em] ml-2">Channel Selection</label>
               <div className="flex gap-2">
-                {['BEP20', 'ERC20'].map((net) => (
+                {['TRC20', 'BEP20', 'ERC20'].map((net) => (
                   <button
                     key={net}
                     onClick={() => setNetwork(net)}
@@ -219,9 +221,11 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
               </div>
 
               {(() => {
-                const currentAddress = network === 'BEP20' 
-                  ? settings?.admin_address_bep20 
-                  : settings?.admin_address_erc20;
+                const currentAddress = network === 'TRC20'
+                  ? settings?.admin_address_trc20
+                  : network === 'BEP20' 
+                    ? settings?.admin_address_bep20 
+                    : settings?.admin_address_erc20;
                 
                 return (
                   <div className="bg-black/40 p-4 sm:p-5 rounded-2xl border border-white/10 flex items-center justify-between group/addr hover:border-electric/40 transition-all cursor-pointer" onClick={() => handleCopy(currentAddress || '', network)}>
