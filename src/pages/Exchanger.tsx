@@ -160,7 +160,7 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
         amount: Number(amount),
         type: requestType,
         utr_number: utr || '',
-        address: address || '',
+        address: currentAddress || '',
         network: network,
       });
 
