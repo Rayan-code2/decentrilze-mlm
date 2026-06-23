@@ -148,11 +148,9 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
       }
 
       const currentAddress = requestType === 'deposit' 
-        ? (network === 'TRC20' 
-            ? settings?.admin_address_trc20 
-            : network === 'BEP20' 
-              ? settings?.admin_address_bep20 
-              : settings?.admin_address_erc20)
+        ? (network === 'BEP20' 
+            ? settings?.admin_address_bep20 
+            : settings?.admin_address_erc20)
         : address;
 
       const res = await api.createExchangerRequest({
@@ -221,11 +219,9 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
               </div>
 
               {(() => {
-                const currentAddress = network === 'TRC20' 
-                  ? settings?.admin_address_trc20 
-                  : network === 'BEP20' 
-                    ? settings?.admin_address_bep20 
-                    : settings?.admin_address_erc20;
+                const currentAddress = network === 'BEP20' 
+                  ? settings?.admin_address_bep20 
+                  : settings?.admin_address_erc20;
                 
                 return (
                   <div className="bg-black/40 p-4 sm:p-5 rounded-2xl border border-white/10 flex items-center justify-between group/addr hover:border-electric/40 transition-all cursor-pointer" onClick={() => handleCopy(currentAddress || '', network)}>

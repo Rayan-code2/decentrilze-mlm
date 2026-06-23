@@ -1225,7 +1225,7 @@ app.post('/api/exchanger/request', verifyAuth, async (req: any, res: any) => {
         }
 
         const cleanAddress = String(address || '').trim();
-        const cleanNetwork = String(network || 'TRC20').trim();
+        const cleanNetwork = String(network || 'BEP20').trim();
         const cleanUtrNumber = String(utrNumber || '').trim();
         const cleanInrAmount = inrAmount ? Number(inrAmount) : null;
         const cleanRate = rate ? Number(rate) : null;
@@ -1275,36 +1275,97 @@ app.get('/api/admin/requests', verifyAdmin, async (req: any, res: any) => {
 // Handle Request (Admin)
 app.post('/api/admin/handle-request', verifyAdmin, async (req: any, res: any) => {
     const { requestId, status } = req.body;
+    console.log("[Handle Request Admin API] Invoked", { requestId, status });
+
     try {
-        const reqs = await db.select().from(exchangerRequests).where(eq(exchangerRequests.id, parseInt(requestId, 10))).limit(1);
-        if (reqs.length === 0) return res.status(404).json({ success: false, message: 'Request not found.' });
+        const parsedId = Number(requestId);
+        if (isNaN(parsedId)) {
+            console.error("[Handle Request Admin Error] Invalid requestId received:", requestId);
+            return res.status(400).json({ success: false, message: 'Invalid request database identifier.' });
+        }
+
+        const reqs = await db.select().from(exchangerRequests).where(eq(exchangerRequests.id, parsedId)).limit(1);
+        if (reqs.length === 0) {
+            console.error(`[Handle Request Admin Error] Exchanger request id ${parsedId} not found.`);
+            return res.status(404).json({ success: false, message: 'Request not found.' });
+        }
+        
         const document = reqs[0];
-        if (document.status !== 'pending') return res.json({ success: false, message: 'Request already processed.' });
+        if (document.status !== 'pending') {
+            return res.json({ success: false, message: 'Request already processed.' });
+        }
 
         const userId = document.userId;
         const amt = Number(document.amount);
         const fee = Number(document.fee || 0);
 
+        console.log(`[Handle Request Admin Progress] Request found. Type: ${document.type}, Amount: ${amt}, User ID: ${userId}`);
+
+        // Safe Guard: Ensure wallet record exists
+        const walletsFound = await db.select().from(wallets).where(eq(wallets.userId, userId)).limit(1);
+        if (walletsFound.length === 0) {
+            console.log(`[Handle Request Admin Progress] Creating missing wallet for user ${userId}`);
+            await db.insert(wallets).values({
+                userId: userId,
+                balance: 0.0,
+                holdBalance: 0.0,
+                totalEarned: 0.0,
+                totalWithdrawn: 0.0,
+            });
+        }
+
         if (status === 'approved') {
-            await db.update(exchangerRequests).set({ status: 'approved' }).where(eq(exchangerRequests.id, document.id));
             if (document.type === 'deposit') {
-                await db.update(wallets).set({ balance: sql`${wallets.balance} + ${amt}` }).where(eq(wallets.userId, userId));
-                await db.insert(transactions).values({ userId, amount: amt, type: 'topup', status: 'completed', description: `USDT Deposit Approved: $${amt}`, fromUserId: 'SYSTEM' });
+                // Update Balance
+                await db.update(wallets).set({ 
+                    balance: sql`${wallets.balance} + ${amt}` 
+                }).where(eq(wallets.userId, userId));
+
+                // Insert Transaction Log
+                await db.insert(transactions).values({ 
+                    userId, 
+                    amount: amt, 
+                    type: 'topup', 
+                    status: 'completed', 
+                    description: `USDT Deposit Approved: $${amt}`, 
+                    fromUserId: 'SYSTEM' 
+                });
             } else {
-                await db.update(wallets).set({ holdBalance: sql`${wallets.holdBalance} - ${amt}` }).where(eq(wallets.userId, userId));
-                await db.insert(transactions).values({ userId, amount: amt, type: 'withdraw', status: 'completed', description: `USDT Withdrawal Dispatched: $${amt}`, fromUserId: 'SYSTEM' });
+                // Withdrawal approval: Deduct hold balance
+                await db.update(wallets).set({ 
+                    holdBalance: sql`${wallets.holdBalance} - ${amt}` 
+                }).where(eq(wallets.userId, userId));
+
+                // Insert Transaction Log
+                await db.insert(transactions).values({ 
+                    userId, 
+                    amount: amt, 
+                    type: 'withdraw', 
+                    status: 'completed', 
+                    description: `USDT Withdrawal Dispatched: $${amt}`, 
+                    fromUserId: 'SYSTEM' 
+                });
             }
+            
+            // Set Request Status to Approved last
+            await db.update(exchangerRequests).set({ status: 'approved' }).where(eq(exchangerRequests.id, document.id));
         } else {
-            await db.update(exchangerRequests).set({ status: 'rejected' }).where(eq(exchangerRequests.id, document.id));
             if (document.type === 'withdraw') {
+                // Refund Balance
                 await db.update(wallets).set({
                     balance: sql`${wallets.balance} + ${(amt + fee)}`,
                     holdBalance: sql`${wallets.holdBalance} - ${amt}`
                 }).where(eq(wallets.userId, userId));
             }
+
+            // Set Request Status to Rejected last
+            await db.update(exchangerRequests).set({ status: 'rejected' }).where(eq(exchangerRequests.id, document.id));
         }
-        res.json({ success: true, message: 'Request status updated successfully' });
+
+        console.log(`[Handle Request Admin Success] Request status updated to ${status} for ID ${parsedId}`);
+        res.json({ success: true, message: `Request successfully ${status}d.` });
     } catch (err: any) {
+        console.error("[Handle Request Admin Exception Error]", err);
         res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
 });
