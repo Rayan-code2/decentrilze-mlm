@@ -267,8 +267,19 @@ export const mockApi = {
     },
     getExchangerRequests: async (userId?: string): Promise<ExchangerRequest[]> => {
       const requests: ExchangerRequest[] = JSON.parse(localStorage.getItem('spiral_exchanger_requests') || '[]');
-      if (userId) return requests.filter(r => r.user_id === userId);
-      return requests;
+      const users = await mockApi.db.getAllUsers();
+      const list = requests.map(r => {
+        const user = users.find(u => u.id === r.user_id || u.user_id === r.user_id || (u as any).uid === r.user_id);
+        return {
+          ...r,
+          userName: user?.name,
+          userEmail: user?.email,
+          user_name: user?.name,
+          user_email: user?.email,
+        };
+      });
+      if (userId) return list.filter(r => r.user_id === userId);
+      return list;
     },
     createExchangerRequest: async (request: Partial<ExchangerRequest>) => {
       const requests: ExchangerRequest[] = JSON.parse(localStorage.getItem('spiral_exchanger_requests') || '[]');

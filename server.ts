@@ -1274,8 +1274,33 @@ app.get('/api/user/exchanger-requests/:userId', verifyAuth, async (req: any, res
 // Admin Requests
 app.get('/api/admin/requests', verifyAdmin, async (req: any, res: any) => {
     try {
-        const requests = await db.select().from(exchangerRequests).orderBy(desc(exchangerRequests.createdAt));
-        res.json({ success: true, requests });
+        const rawList = await db.select({
+            id: exchangerRequests.id,
+            userId: exchangerRequests.userId,
+            amount: exchangerRequests.amount,
+            type: exchangerRequests.type,
+            status: exchangerRequests.status,
+            inrAmount: exchangerRequests.inrAmount,
+            rate: exchangerRequests.rate,
+            utrNumber: exchangerRequests.utrNumber,
+            address: exchangerRequests.address,
+            network: exchangerRequests.network,
+            fee: exchangerRequests.fee,
+            createdAt: exchangerRequests.createdAt,
+            userName: users.name,
+            userEmail: users.email
+        })
+        .from(exchangerRequests)
+        .leftJoin(users, eq(exchangerRequests.userId, users.uid))
+        .orderBy(desc(exchangerRequests.createdAt));
+
+        const mapped = rawList.map(r => ({
+            ...r,
+            user_name: r.userName,
+            user_email: r.userEmail
+        }));
+
+        res.json({ success: true, requests: mapped });
     } catch (err: any) {
         res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }

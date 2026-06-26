@@ -81,6 +81,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
         utr_number: r.utr_number || r.utrNumber,
         inr_amount: r.inr_amount || r.inrAmount,
         created_at: r.created_at || r.createdAt,
+        user_name: r.user_name || r.userName,
+        user_email: r.user_email || r.userEmail,
+        userName: r.userName || r.user_name,
+        userEmail: r.userEmail || r.user_email,
       }));
       setRequests(mappedRequests);
       setPurchases(purchasesData || []);
@@ -784,7 +788,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                       {req.inr_amount && <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest">INR: ₹{req.inr_amount}</p>}
                       <div className="flex gap-4 mt-1">
                         <p className="text-slate-500 text-[8px] font-black uppercase tracking-widest">
-                          User: {req.user_id} | {new Date(req.created_at).toLocaleString()}
+                          User: <span className="text-cyan-400 font-bold text-[9px]">{req.userName || req.user_name || 'N/A'}</span> ({req.user_id}) | {req.userEmail || req.user_email ? `${req.userEmail || req.user_email} | ` : ''}{new Date(req.created_at).toLocaleString()}
                         </p>
                         {req.fee !== undefined && (req.type === 'withdraw' || req.type === 'sell') && (
                           <p className="text-rose-400 text-[8px] font-black uppercase tracking-widest">

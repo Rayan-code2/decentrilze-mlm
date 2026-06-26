@@ -88,6 +88,10 @@ export interface ExchangerRequest {
   address?: string;
   network?: string;
   fee?: number;
+  userName?: string;
+  userEmail?: string;
+  user_name?: string;
+  user_email?: string;
 }
 
 export interface Purchase {
