@@ -452,6 +452,10 @@ const Dashboard: React.FC<DashboardProps> = ({
   const liveBalance = propLiveBalance ?? wallet.balance;
   const liveWalletROI = propLiveWalletROI ?? (wallet.wallet_roi_earned || 0);
 
+  // Compute live total earned dynamically based on real-time ticking yield difference
+  const balanceDiff = Math.max(0, liveBalance - (wallet.balance || 0));
+  const liveTotalEarned = (wallet.total_earned || 0) + balanceDiff;
+
   // Fetch settings for marquee
   React.useEffect(() => {
     const fetchSettings = async () => {
@@ -721,39 +725,63 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </div>
               </div>
 
-              <div className="space-y-2 sm:space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-1.5 h-5 sm:h-8 bg-gradient-to-b from-cyan-400 to-blue-600 rounded-full shadow-[0_0_15px_rgba(0,229,255,0.5)]"></div>
-                  <p className="text-[10px] sm:text-[18px] font-black text-slate-400 uppercase tracking-[0.2em] sm:tracking-[0.4em]">Total Available Assets</p>
+              <div className="space-y-4 sm:space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
+                  {/* AVAILABLE BALANCE CARD */}
+                  <div className="relative group/balance bg-black/40 border border-cyan-500/20 p-5 sm:p-6 rounded-3xl backdrop-blur-md hover:border-cyan-500/40 transition-all duration-300">
+                    <div className="absolute -inset-1 bg-cyan-500/5 rounded-3xl blur-xl opacity-0 group-hover/balance:opacity-100 transition-opacity duration-500"></div>
+                    <div className="relative space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-1.5 h-4 bg-cyan-400 rounded-full shadow-[0_0_10px_rgba(0,229,255,0.5)]"></div>
+                          <span className="text-[10px] sm:text-[13px] font-black text-cyan-400 uppercase tracking-widest">Available Balance</span>
+                        </div>
+                        <span className="text-[7px] sm:text-[9px] font-black text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 tracking-widest uppercase">WITHDRAWABLE</span>
+                      </div>
+                      <div className="flex items-baseline gap-2 relative">
+                        <span className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tighter text-white drop-shadow-[0_10px_20px_rgba(0,229,255,0.2)] bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-cyan-100 tabular-nums">
+                          ${liveBalance?.toFixed(4) || '0.0000'}
+                        </span>
+                        <span className="text-sm sm:text-lg font-black text-cyan-400 italic tracking-tighter opacity-80">USDT</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* TOTAL EARNINGS CARD */}
+                  <div className="relative group/earnings bg-black/40 border border-purple-500/20 p-5 sm:p-6 rounded-3xl backdrop-blur-md hover:border-purple-500/40 transition-all duration-300">
+                    <div className="absolute -inset-1 bg-purple-500/5 rounded-3xl blur-xl opacity-0 group-hover/earnings:opacity-100 transition-opacity duration-500"></div>
+                    <div className="relative space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-1.5 h-4 bg-purple-400 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)]"></div>
+                          <span className="text-[10px] sm:text-[13px] font-black text-purple-400 uppercase tracking-widest">Total Earnings</span>
+                        </div>
+                        <span className="text-[7px] sm:text-[9px] font-black text-purple-400 bg-purple-500/10 px-2.5 py-1 rounded-full border border-purple-500/20 tracking-widest uppercase">LIFETIME</span>
+                      </div>
+                      <div className="flex items-baseline gap-2 relative">
+                        <span className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tighter text-white drop-shadow-[0_10px_20px_rgba(168,85,247,0.2)] bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-purple-100 tabular-nums">
+                          ${liveTotalEarned?.toFixed(4) || '0.0000'}
+                        </span>
+                        <span className="text-sm sm:text-lg font-black text-purple-400 italic tracking-tighter opacity-80">USDT</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center justify-center sm:justify-start gap-3 sm:gap-8 flex-wrap">
-                  <div className="relative group/balance">
-                    <div className="absolute -inset-8 bg-cyan-500/20 blur-[40px] rounded-full opacity-0 group-hover/balance:opacity-100 transition-opacity duration-1000"></div>
-                    <div className="flex items-baseline gap-2 sm:gap-4 relative">
-                      <span className="text-4xl sm:text-6xl md:text-5xl lg:text-8xl xl:text-9xl font-black tracking-tighter text-white drop-shadow-[0_20px_40px_rgba(0,229,255,0.5)] bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-cyan-200/80 tabular-nums">
-                        ${liveBalance?.toFixed(4) || '0.0000'}
-                      </span>
-                      <span className="text-lg sm:text-2xl md:text-xl lg:text-4xl font-black text-cyan-400 italic tracking-tighter opacity-80">USDT</span>
-                    </div>
-                  </div>
 
-                  {/* BALANCE MINI CARDS (Optional, currently just showing main balance largely) */}
-                  
-                  <div className="flex items-center justify-center gap-3 sm:gap-4 self-center flex-wrap">
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-md">
-                      <div className="flex h-2 w-2 sm:h-3 sm:w-3 relative">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 sm:h-3 sm:w-3 bg-emerald-500 shadow-[0_0_12px_#10B981]"></span>
-                      </div>
-                      <span className="text-[8px] sm:text-[12px] font-black text-emerald-400 uppercase tracking-widest">Mining Active</span>
+                {/* BOTTOM BADGES */}
+                <div className="flex items-center justify-center sm:justify-start gap-3 sm:gap-4 flex-wrap pt-2">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-md">
+                    <div className="flex h-2 w-2 sm:h-3 sm:w-3 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 sm:h-3 sm:w-3 bg-emerald-500 shadow-[0_0_12px_#10B981]"></span>
                     </div>
-                    {dailyPackageYield > 0 && (
-                      <div className="px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 backdrop-blur-md">
-                        <span className="text-[7px] sm:text-[11px] font-black text-cyan-400 uppercase tracking-widest whitespace-nowrap">+${dailyPackageYield.toFixed(2)} Daily Node Yield</span>
-                      </div>
-                    )}
-
+                    <span className="text-[8px] sm:text-[12px] font-black text-emerald-400 uppercase tracking-widest">Mining Active</span>
                   </div>
+                  {dailyPackageYield > 0 && (
+                    <div className="px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 backdrop-blur-md">
+                      <span className="text-[7px] sm:text-[11px] font-black text-cyan-400 uppercase tracking-widest whitespace-nowrap">+${dailyPackageYield.toFixed(2)} Daily Node Yield</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
