@@ -161,7 +161,7 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
         type: requestType,
         utr_number: utr || '',
         address: currentAddress || '',
-        network: network,
+        network: requestType === 'withdraw' ? 'BEP20' : network,
       });
 
       if (res.success) {
@@ -327,13 +327,21 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 relative z-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
             <div className="bg-black/40 border border-white/5 p-4 sm:p-5 rounded-[1.5rem] sm:rounded-3xl group/tier overflow-hidden relative">
               <div className="absolute inset-0 bg-red-500/5 translate-y-full group-hover:translate-y-0 transition-transform duration-700"></div>
               <p className="text-[7px] sm:text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1 relative z-10">Global Protocol Fee</p>
               <div className="flex items-baseline gap-1.5 sm:gap-2 relative z-10">
                 <span className="text-2xl sm:text-4xl font-black text-red-500 italic leading-none">{withdrawalFee}%</span>
                 <span className="text-[7px] sm:text-[8px] font-black text-slate-600 uppercase tracking-widest italic">Standard Commission</span>
+              </div>
+            </div>
+            <div className="bg-black/40 border border-white/5 p-4 sm:p-5 rounded-[1.5rem] sm:rounded-3xl group/tier overflow-hidden relative">
+              <div className="absolute inset-0 bg-red-500/5 translate-y-full group-hover:translate-y-0 transition-transform duration-700"></div>
+              <p className="text-[7px] sm:text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1 relative z-10">Target Network</p>
+              <div className="flex items-baseline gap-1.5 sm:gap-2 relative z-10">
+                <span className="text-2xl sm:text-4xl font-black text-red-500 italic leading-none">BEP20</span>
+                <span className="text-[7px] sm:text-[8px] font-black text-slate-600 uppercase tracking-widest italic">Binance Smart Chain</span>
               </div>
             </div>
           </div>
