@@ -165,7 +165,14 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
       });
 
       if (res.success) {
-        setStatusMsg({ type: 'success', message: res.message || 'Protocol Synchronized! Our validators are verifying the block.' });
+        let successMessage = res.message || 'Protocol Synchronized! Our validators are verifying the block.';
+        if (requestType === 'deposit') {
+          successMessage = 'Deposit request submitted successfully! Your balance will be updated within 1 hour.';
+        } else if (requestType === 'withdraw') {
+          successMessage = 'Withdrawal request submitted successfully! Your funds will be credited to your wallet within 6 hours.';
+        }
+          
+        setStatusMsg({ type: 'success', message: successMessage });
         setAmount('');
         setUtr('');
         setAddress('');
@@ -180,7 +187,8 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
       setStatusMsg({ type: 'error', message: 'CONNECTION_FAULT: ' + (e.message || 'Unknown network error') });
     } finally {
       setLoading(false);
-      setTimeout(() => setStatusMsg(null), 8000);
+      const delay = (activeTab === 'topup' || activeTab === 'withdraw') ? 18000 : 8000;
+      setTimeout(() => setStatusMsg(null), delay);
     }
   };
 
