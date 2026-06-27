@@ -1212,18 +1212,22 @@ app.post('/api/exchanger/request', verifyAuth, async (req: any, res: any) => {
         }
 
         const cleanType = String(type || 'deposit').toLowerCase() === 'withdraw' ? 'withdraw' : 'deposit';
-        const fees = cleanType === 'withdraw' ? 5.0 : 0.0;
+        let fees = 0.0;
 
         if (cleanType === 'withdraw') {
+            const settings = await getServerSettings();
+            const withdrawalFeePercent = Number(settings?.withdrawal_fee !== undefined ? settings.withdrawal_fee : 5.0);
+            fees = Number(amount) * (withdrawalFeePercent / 100);
+
             const wallet = await fetchWallet(resolvedId);
-            if (!wallet || Number(wallet.balance) < (Number(amount) + fees)) {
+            if (!wallet || Number(wallet.balance) < Number(amount)) {
                 return res.json({ success: false, message: 'Insufficient wallet balance for withdrawal processing' });
             }
             if (!address || !address.trim()) {
                 return res.status(400).json({ success: false, message: 'Destination settlement address is required for withdrawal.' });
             }
             await db.update(wallets).set({
-                balance: sql`${wallets.balance} - ${(Number(amount) + fees)}`,
+                balance: sql`${wallets.balance} - ${Number(amount)}`,
                 holdBalance: sql`${wallets.holdBalance} + ${Number(amount)}`
             }).where(eq(wallets.userId, resolvedId));
         } else {
@@ -1387,7 +1391,7 @@ app.post('/api/admin/handle-request', verifyAdmin, async (req: any, res: any) =>
             if (document.type === 'withdraw') {
                 // Refund Balance
                 await db.update(wallets).set({
-                    balance: sql`${wallets.balance} + ${(amt + fee)}`,
+                    balance: sql`${wallets.balance} + ${amt}`,
                     holdBalance: sql`${wallets.holdBalance} - ${amt}`
                 }).where(eq(wallets.userId, userId));
             }
