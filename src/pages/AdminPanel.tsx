@@ -792,7 +792,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                         </p>
                         {req.fee !== undefined && (req.type === 'withdraw' || req.type === 'sell') && (
                           <p className="text-rose-400 text-[8px] font-black uppercase tracking-widest">
-                            Fee: {req.fee}% | Net: ${(req.amount * (1 - req.fee / 100)).toFixed(2)}
+                            Fee: ${Number(req.fee).toFixed(2)} ({((Number(req.fee) / (Number(req.amount) || 1)) * 100).toFixed(0)}%) | Net: ${(Number(req.amount) - Number(req.fee)).toFixed(2)}
                           </p>
                         )}
                       </div>
