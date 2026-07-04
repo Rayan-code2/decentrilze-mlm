@@ -740,7 +740,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                       </div>
                       <div className="flex items-baseline gap-2 relative">
                         <span className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tighter text-white drop-shadow-[0_10px_20px_rgba(0,229,255,0.2)] bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-cyan-100 tabular-nums">
-                          ${liveBalance?.toFixed(4) || '0.0000'}
+                          ${liveBalance !== undefined ? parseFloat(liveBalance.toFixed(4)) : '0'}
                         </span>
                         <span className="text-sm sm:text-lg font-black text-cyan-400 italic tracking-tighter opacity-80">USDT</span>
                       </div>
@@ -760,7 +760,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                       </div>
                       <div className="flex items-baseline gap-2 relative">
                         <span className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tighter text-white drop-shadow-[0_10px_20px_rgba(168,85,247,0.2)] bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-purple-100 tabular-nums">
-                          ${liveTotalEarned?.toFixed(4) || '0.0000'}
+                          ${liveTotalEarned !== undefined ? parseFloat(liveTotalEarned.toFixed(4)) : '0'}
                         </span>
                         <span className="text-sm sm:text-lg font-black text-purple-400 italic tracking-tighter opacity-80">USDT</span>
                       </div>

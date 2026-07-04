@@ -1824,6 +1824,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                       className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs text-white" 
                     />
                   </div>
+                  <div className="space-y-2">
+                    <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-2">Signup Bonus ($)</label>
+                    <input 
+                      name="signup_bonus" 
+                      type="number" 
+                      step="any"
+                      value={settings.signup_bonus ?? 0} 
+                      onChange={e => setSettings({...settings, signup_bonus: Number(e.target.value)})}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs text-white" 
+                    />
+                  </div>
                 </div>
 
                 <div className="pt-4 space-y-4">

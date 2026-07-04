@@ -213,11 +213,13 @@ export const mockApi = {
       }
 
       // Default initial wallet
+      const signupBonus = Number(settings?.signup_bonus || 0);
+
       const initialWallet: Wallet = {
         id: `w_${userId}`,
         user_id: userId,
-        balance: 0,
-        total_earned: 0,
+        balance: signupBonus,
+        total_earned: signupBonus,
         total_withdrawn: 0,
         last_roi_at: new Date().toISOString(),
         wallet_roi_earned: 0,
@@ -227,6 +229,24 @@ export const mockApi = {
         daily_package_roi: dailyPackageROI
       };
       localStorage.setItem(walletKey, JSON.stringify(initialWallet));
+
+      if (signupBonus > 0) {
+        const txKey = `spiral_transactions_${userId}`;
+        const transactions = JSON.parse(localStorage.getItem(txKey) || '[]');
+        const newTx = {
+          id: `tx_signup_${Date.now()}`,
+          user_id: userId,
+          amount: signupBonus,
+          type: 'signup_bonus' as any,
+          status: 'completed',
+          created_at: new Date().toISOString(),
+          description: 'Signup Bonus',
+          from_user_id: 'SYSTEM'
+        };
+        transactions.unshift(newTx);
+        localStorage.setItem(txKey, JSON.stringify(transactions.slice(0, 100)));
+      }
+
       return initialWallet;
     },
     updateWallet: async (userId: string, data: Partial<Wallet>): Promise<{ success: boolean; message: string }> => {

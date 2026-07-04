@@ -91,6 +91,7 @@ export async function getServerSettings(): Promise<any> {
         enable_withdrawal: s.enableWithdrawal !== null ? s.enableWithdrawal : true,
         enable_swap: s.enableSwap !== null ? s.enableSwap : true,
         roi_interval_minutes: s.roiIntervalMinutes ?? 1440,
+        signup_bonus: s.signupBonus ?? 0.0,
         rank_rewards: s.rankRewards ? JSON.parse(s.rankRewards) : [],
         spin_rewards: s.spinRewards ? JSON.parse(s.spinRewards) : [],
       };
@@ -141,6 +142,7 @@ export async function getServerSettings(): Promise<any> {
       enableWithdrawal: true,
       enableSwap: true,
       roiIntervalMinutes: 1440,
+      signupBonus: 0.0,
       rankRewards: JSON.stringify(defaultRankRewards),
       spinRewards: JSON.stringify(defaultSpinRewards),
     }).returning();
@@ -171,6 +173,7 @@ export async function getServerSettings(): Promise<any> {
       enable_withdrawal: true,
       enable_swap: true,
       roi_interval_minutes: 1440,
+      signup_bonus: 0.0,
       rank_rewards: defaultRankRewards,
       spin_rewards: defaultSpinRewards,
     };

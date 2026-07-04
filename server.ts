@@ -443,12 +443,26 @@ app.post('/api/auth/register', async (req: any, res: any) => {
             directCount: 0,
         }).returning();
 
-        // Create wallet
+        // Create wallet with signup bonus if configured
+        const systemSettings = await getServerSettings();
+        const bonusAmount = Number(systemSettings?.signup_bonus || 0.0);
+
         await db.insert(wallets).values({
             userId: generatedUid,
-            balance: 0.0,
-            totalEarned: 0.0,
+            balance: bonusAmount,
+            totalEarned: bonusAmount,
         });
+
+        if (bonusAmount > 0) {
+            await db.insert(transactions).values({
+                userId: generatedUid,
+                amount: bonusAmount,
+                type: 'signup_bonus',
+                status: 'completed',
+                description: 'Signup Bonus',
+                fromUserId: 'SYSTEM',
+            });
+        }
 
         // Increment sponsor's direct count
         if (resolvedSponsor && resolvedSponsor !== '0' && resolvedSponsor !== '1') {
@@ -1107,6 +1121,7 @@ app.post('/api/update-settings', verifyAdmin, async (req: any, res: any) => {
             enableWithdrawal: settings.enable_withdrawal !== undefined ? settings.enable_withdrawal : true,
             enableSwap: settings.enable_swap !== undefined ? settings.enable_swap : true,
             roiIntervalMinutes: parseInt(settings.roi_interval_minutes || 1440, 10),
+            signupBonus: Number(settings.signup_bonus || 0.0),
             rankRewards: typeof settings.rank_rewards === 'string' ? settings.rank_rewards : JSON.stringify(settings.rank_rewards || []),
             spinRewards: typeof settings.spin_rewards === 'string' ? settings.spin_rewards : JSON.stringify(settings.spin_rewards || []),
         };
@@ -1770,6 +1785,7 @@ async function verifyAndHealPostgresSchema() {
         `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "enable_withdrawal" boolean DEFAULT true;`,
         `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "enable_swap" boolean DEFAULT true;`,
         `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "roi_interval_minutes" integer;`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "signup_bonus" double precision DEFAULT 0.0;`,
         `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "rank_rewards_json" text DEFAULT '[]';`,
         `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "spin_rewards_json" text DEFAULT '[]';`,
         `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();`,

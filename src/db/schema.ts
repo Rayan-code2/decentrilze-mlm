@@ -134,6 +134,7 @@ export const settingsTable = pgTable('settings', {
   enableWithdrawal: boolean('enable_withdrawal').default(true),
   enableSwap: boolean('enable_swap').default(true),
   roiIntervalMinutes: integer('roi_interval_minutes'),
+  signupBonus: doublePrecision('signup_bonus').default(0.0),
   rankRewards: text('rank_rewards_json').default('[]'),
   spinRewards: text('spin_rewards_json').default('[]'),
   createdAt: timestamp('created_at').defaultNow(),

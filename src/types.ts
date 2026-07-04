@@ -159,6 +159,7 @@ export interface Settings {
   boosting_reward: number;
   deposit_fee: number;
   withdrawal_fee: number;
+  signup_bonus?: number;
   rank_rewards?: RankReward[];
   spin_cost: number;
   spin_rewards: SpinReward[];
