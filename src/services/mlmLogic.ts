@@ -183,26 +183,42 @@ export async function getServerSettings(): Promise<any> {
   }
 }
 
-// Find next available slot inside the matrix tree
-export async function findGlobalMatrixParent(): Promise<string> {
+// Find next available slot inside the sponsor's team matrix tree (Individual Team Spillover)
+export async function findTeamMatrixParent(sponsorId: string | null): Promise<string> {
   try {
-    const list = await db.select().from(users).orderBy(asc(users.createdAt));
-    for (const u of list) {
-      if (!u.isActive && u.uid !== '1') continue; // Only place under active accounts or root admin
+    const startId = sponsorId || '1';
+    
+    // Breadth-First Search queue
+    const queue: string[] = [startId];
+    const visited = new Set<string>([startId]);
+    
+    while (queue.length > 0) {
+      const currentId = queue.shift()!;
+      
+      // Get active children under this parent
       const children = await db.select()
         .from(users)
         .where(and(
-          eq(users.matrixParentId, u.uid),
+          eq(users.matrixParentId, currentId),
           eq(users.isActive, true)
-        ));
+        ))
+        .orderBy(asc(users.createdAt));
       
       if (children.length < 2) {
-        return u.uid;
+        return currentId;
+      }
+      
+      // Enqueue the children to search the next level
+      for (const child of children) {
+        if (!visited.has(child.uid)) {
+          visited.add(child.uid);
+          queue.push(child.uid);
+        }
       }
     }
     return '1';
   } catch (error) {
-    console.error("Critical Matrix Search Error:", error);
+    console.error("Critical Team Matrix Search Error:", error);
     return '1';
   }
 }

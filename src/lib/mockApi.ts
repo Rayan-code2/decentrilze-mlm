@@ -22,8 +22,8 @@ export const mockApi = {
         throw new Error('User already exists with this email');
       }
 
-      // Find Global Matrix Parent (Auto-fill)
-      const matrixParentId = await mockApi.db.findGlobalMatrixParent();
+      // Find Team Matrix Parent (Individual Team Spillover)
+      const matrixParentId = await mockApi.db.findTeamMatrixParent(sponsorId);
 
       const newUser: User = {
         id: (users.length + 1).toString(),
@@ -948,6 +948,34 @@ export const mockApi = {
         }
       }
       return null;
+    },
+    findTeamMatrixParent: async (sponsorId: string | null): Promise<string | null> => {
+      const users = await mockApi.db.getAllUsers();
+      const startId = sponsorId || '1';
+      
+      const queue: string[] = [startId];
+      const visited = new Set<string>([startId]);
+      
+      while (queue.length > 0) {
+        const currentId = queue.shift()!;
+        
+        // Find children whose matrix parent is currentId
+        const children = users
+          .filter(u => u.matrix_parent_id === currentId && u.is_active !== false)
+          .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        
+        if (children.length < 2) {
+          return currentId;
+        }
+        
+        for (const child of children) {
+          if (!visited.has(child.id)) {
+            visited.add(child.id);
+            queue.push(child.id);
+          }
+        }
+      }
+      return '1';
     },
     distributeROI: async (userId: string) => {
       const walletKey = `spiral_wallet_${userId}`;

@@ -14,7 +14,7 @@ import {
     fetchUserById,
     fetchWallet,
     getServerSettings,
-    findGlobalMatrixParent,
+    findTeamMatrixParent,
     distributeIncomeServer,
     triggerBoostingServer,
     processBoostingQueue,
@@ -886,7 +886,7 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
         if (!profile.isActive) {
             let assignedParent = '1';
             try {
-                const mp = await findGlobalMatrixParent();
+                const mp = await findTeamMatrixParent(profile.referredBy);
                 if (mp) assignedParent = mp;
             } catch (parentErr) {
                 console.warn('[Activation] Matrix parent lookup failed, fallback to 1:', parentErr);
