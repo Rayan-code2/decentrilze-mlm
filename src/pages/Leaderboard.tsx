@@ -19,21 +19,24 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ user }) => {
       try {
         const isLive = isAppwriteConfigured();
         const api = isLive ? appwriteService : mockApi.db;
-        const users = await api.getAllUsers();
-        // Sort by direct count and then by creation date as a proxy for performance
-        const sorted = [...users].sort((a, b) => {
-          if (b.direct_count !== a.direct_count) {
-            return b.direct_count - a.direct_count;
-          }
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        
+        // Fetch real leaderboard sorted by total earnings from backend
+        const leaderboardData = api.getLeaderboard ? await api.getLeaderboard() : [];
+        
+        const sorted = [...leaderboardData].sort((a, b) => {
+          const bEarn = Number(b.total_earned || b.totalEarned || b.earnings || 0);
+          const aEarn = Number(a.total_earned || a.totalEarned || a.earnings || 0);
+          return bEarn - aEarn;
         });
         
-        // Add mock earnings for display
-        const withEarnings = sorted.slice(0, 10).map((u, index) => ({
-          ...u,
-          rank: index + 1,
-          earnings: 1500 - (index * 120) + Math.floor(Math.random() * 50)
-        }));
+        const withEarnings = sorted.slice(0, 10).map((u, index) => {
+          const actualEarn = Number(u.total_earned || u.totalEarned || u.earnings || 0);
+          return {
+            ...u,
+            rank: index + 1,
+            earnings: actualEarn
+          };
+        });
         
         setTopUsers(withEarnings);
       } catch (e) {

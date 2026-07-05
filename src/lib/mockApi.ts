@@ -164,6 +164,7 @@ export const mockApi = {
         wallet.total_earned += finalAmount;
         if (type === 'direct_income') wallet.direct_income = (wallet.direct_income || 0) + finalAmount;
         if (type === 'level_income') wallet.level_income = (wallet.level_income || 0) + finalAmount;
+        if (type === 'matrix_income' || type === 'pool_payout') wallet.matrix_income = (wallet.matrix_income || 0) + finalAmount;
         localStorage.setItem(walletKey, JSON.stringify(wallet));
         
         await mockApi.db.addTransaction(userId, {
@@ -887,6 +888,25 @@ export const mockApi = {
 
       return users;
     },
+    getLeaderboard: async (): Promise<any[]> => {
+      try {
+        const users = await mockApi.db.getAllUsers();
+        const leaderboardData: any[] = [];
+        for (const u of users) {
+          const walletKey = `spiral_wallet_${u.id}`;
+          const savedWallet = localStorage.getItem(walletKey);
+          const wallet = savedWallet ? JSON.parse(savedWallet) : { total_earned: 0 };
+          leaderboardData.push({
+            ...u,
+            total_earned: Number(wallet.total_earned || 0),
+            earnings: Number(wallet.total_earned || 0),
+          });
+        }
+        return leaderboardData;
+      } catch (error) {
+        return [];
+      }
+    },
     getAllPurchases: async (): Promise<Purchase[]> => {
       const users = await mockApi.db.getAllUsers();
       let allPurchases: Purchase[] = [];
@@ -1061,7 +1081,29 @@ export const mockApi = {
       }
 
       // Step 2: Pay Placement Parent
-      await mockApi.db.distributeIncome(finalPlacementId, placementIncome, 'level_income', `Placement Income from ${user.name} (${pkg.name})`, userId);
+      await mockApi.db.distributeIncome(finalPlacementId, placementIncome, 'matrix_income', `Placement bonus: Node $${pkg.price} from ${user.name}`, userId);
+
+      // Distribute 10% of placementIncome to finalPlacementId's sponsor uplines up to 10 levels
+      if (placementIncome > 0 && finalPlacementId && finalPlacementId !== '1') {
+        const parentUser = users.find(u => u.id === finalPlacementId);
+        let matrixUplineId = parentUser?.referred_by || '1';
+        const uplinePayout = placementIncome * 0.10;
+        if (uplinePayout > 0) {
+          for (let l = 1; l <= 10; l++) {
+            if (!matrixUplineId || matrixUplineId === '0' || matrixUplineId === finalPlacementId) break;
+            await mockApi.db.distributeIncome(
+              matrixUplineId,
+              uplinePayout,
+              'matrix_income',
+              `Matrix Level ${l} commission (10% of $${placementIncome.toFixed(2)} from ${parentUser?.name || 'User'})`,
+              finalPlacementId
+            );
+            if (matrixUplineId === '1') break;
+            const nextUpline = users.find(u => u.id === matrixUplineId);
+            matrixUplineId = nextUpline?.referred_by || '1';
+          }
+        }
+      }
 
       console.log(`Distributing Income for ${pkg.name} ($${pkg.price}):`);
       console.log(`- Sponsor (${finalSponsorId}): $${sponsorIncome}`);

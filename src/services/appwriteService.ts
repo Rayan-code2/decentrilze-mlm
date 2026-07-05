@@ -331,6 +331,18 @@ export const appwriteService = {
     }
   },
 
+  getLeaderboard: async (): Promise<any[]> => {
+    try {
+      const headers = await appwriteService.getAuthHeaders();
+      const response = await fetch('/api/user/leaderboard', { headers });
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.leaderboard || [];
+    } catch (error) {
+      return [];
+    }
+  },
+
   getAllPurchases: async (): Promise<Purchase[]> => {
     try {
       const headers = await appwriteService.getAuthHeaders();

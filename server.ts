@@ -926,6 +926,30 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
             const matrixPayout = Number(((price * (pkg.matrixIncomePercent || 0)) / 100).toFixed(4));
             if (matrixPayout > 0) {
                 await distributeIncomeServer(matrixParentUid, matrixPayout, 'matrix_income', `Placement bonus: Node $${price} from ${profile.name}`, userId);
+
+                // Distribute 10% of matrixPayout to matrixParentUid's upline (up to 10 levels)
+                let matrixUplineId = '1';
+                const recipientUser = await fetchUserById(matrixParentUid);
+                if (recipientUser) {
+                    matrixUplineId = recipientUser.referredBy || '1';
+                }
+                const uplinePayout = Number((matrixPayout * 0.10).toFixed(4));
+                if (uplinePayout > 0) {
+                    for (let l = 1; l <= 10; l++) {
+                        if (!matrixUplineId || matrixUplineId === '0' || matrixUplineId === matrixParentUid) break;
+                        await distributeIncomeServer(
+                            matrixUplineId,
+                            uplinePayout,
+                            'matrix_income',
+                            `Matrix Level ${l} commission (10% of $${matrixPayout} from ${recipientUser?.name || 'User'})`,
+                            matrixParentUid,
+                            l
+                        );
+                        if (matrixUplineId === '1') break;
+                        const parentDoc = await fetchUserById(matrixUplineId);
+                        matrixUplineId = parentDoc?.referredBy || '1';
+                    }
+                }
             }
         }
 
@@ -970,6 +994,45 @@ app.get('/api/user/directs/:userId', verifyAuth, async (req: any, res: any) => {
         const resolvedId = await resolveUserAuthId(userId) || userId;
         const list = await db.select().from(users).where(eq(users.referredBy, resolvedId)).orderBy(desc(users.createdAt));
         res.json({ success: true, directs: list.map(sanitizeUser) });
+    } catch (err: any) {
+        res.status(500).json({ success: false, message: cleanErrorMessage(err) });
+    }
+});
+
+// Leaderboard
+app.get('/api/user/leaderboard', verifyAuth, async (req: any, res: any) => {
+    try {
+        const list = await db.select({
+            id: users.id,
+            uid: users.uid,
+            email: users.email,
+            name: users.name,
+            role: users.role,
+            isActive: users.isActive,
+            directCount: users.directCount,
+            nodeId: users.nodeId,
+            globalRank: users.globalRank,
+            totalEarned: wallets.totalEarned,
+        })
+        .from(users)
+        .leftJoin(wallets, eq(users.uid, wallets.userId))
+        .orderBy(desc(wallets.totalEarned));
+
+        const formatted = list.map(item => ({
+            id: item.id,
+            uid: item.uid,
+            email: item.email,
+            name: item.name,
+            role: item.role,
+            is_active: item.isActive,
+            direct_count: item.directCount,
+            node_id: item.nodeId,
+            global_rank: item.globalRank,
+            total_earned: Number(item.totalEarned || 0.0),
+            totalEarned: Number(item.totalEarned || 0.0),
+        }));
+
+        res.json({ success: true, leaderboard: formatted });
     } catch (err: any) {
         res.status(500).json({ success: false, message: cleanErrorMessage(err) });
     }
