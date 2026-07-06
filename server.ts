@@ -1447,9 +1447,10 @@ app.post('/api/admin/handle-request', verifyAdmin, async (req: any, res: any) =>
                     fromUserId: 'SYSTEM' 
                 });
             } else {
-                // Withdrawal approval: Deduct hold balance
+                // Withdrawal approval: Deduct hold balance and increment total withdrawn
                 await db.update(wallets).set({ 
-                    holdBalance: sql`${wallets.holdBalance} - ${amt}` 
+                    holdBalance: sql`${wallets.holdBalance} - ${amt}`,
+                    totalWithdrawn: sql`${wallets.totalWithdrawn} + ${amt}`
                 }).where(eq(wallets.userId, userId));
 
                 // Insert Transaction Log

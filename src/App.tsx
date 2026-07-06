@@ -435,13 +435,36 @@ const App: React.FC = () => {
       setWallet({ id: '', user_id: '', balance: 0, total_earned: 0, total_withdrawn: 0 });
       setActiveTab('wallet');
       localStorage.removeItem('spiral_user');
+      localStorage.removeItem('spiral_admin_user');
+      localStorage.removeItem('spiral_admin_token');
     } catch (e) {
       setCurrentUser(null);
       localStorage.removeItem('spiral_user');
+      localStorage.removeItem('spiral_admin_user');
+      localStorage.removeItem('spiral_admin_token');
     } finally {
       setIsLoggingOut(false);
       setLoading(false);
     }
+  };
+
+  const handleReturnToAdmin = () => {
+    const adminUser = localStorage.getItem('spiral_admin_user');
+    const adminToken = localStorage.getItem('spiral_admin_token');
+    
+    if (adminUser) {
+      localStorage.setItem('spiral_user', adminUser);
+    }
+    if (adminToken) {
+      localStorage.setItem('spiral_auth_token', adminToken);
+    } else {
+      localStorage.removeItem('spiral_auth_token');
+    }
+    
+    localStorage.removeItem('spiral_admin_user');
+    localStorage.removeItem('spiral_admin_token');
+    
+    window.location.reload();
   };
 
   const isResetPage = window.location.pathname === '/reset-password';
@@ -544,6 +567,19 @@ const App: React.FC = () => {
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} userRole={currentUser.role as any} onLogout={handleLogout} />
       
       <main className="flex-1 flex flex-col relative overflow-y-auto z-10">
+        {localStorage.getItem('spiral_admin_user') && (
+          <div className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-black px-6 py-2.5 text-center text-[10px] font-black uppercase tracking-widest flex flex-wrap items-center justify-center gap-3 z-50 shadow-[0_4px_25px_rgba(245,158,11,0.25)] select-none border-b border-amber-600/20">
+            <ShieldAlert size={14} className="animate-pulse text-black" />
+            <span>ADMINISTRATOR MODE: Currently Impersonating <span className="underline font-mono text-xs">{currentUser.name || currentUser.email}</span></span>
+            <button 
+              onClick={handleReturnToAdmin}
+              className="px-3 py-1.5 bg-black hover:bg-neutral-900 text-amber-400 hover:text-white font-mono text-[9px] font-black tracking-wider rounded-lg border border-amber-400 transition-all active:scale-95 cursor-pointer shadow-md"
+            >
+              [ RETURN TO ADMIN PANEL ]
+            </button>
+          </div>
+        )}
+
         {connectionError && (
           <div className="bg-red-500/10 border-b border-red-500/20 p-2 text-center text-[10px] font-black uppercase tracking-widest text-red-400 flex items-center justify-center gap-2 z-50 backdrop-blur-md">
             <AlertTriangle size={12} />

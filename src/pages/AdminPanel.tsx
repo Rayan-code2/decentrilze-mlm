@@ -371,6 +371,38 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
     setTimeout(() => setStatusMsg(null), 3000);
   };
 
+  const handleImpersonate = (targetUser: User) => {
+    const targetName = targetUser.name || targetUser.email || 'this user';
+    if (!window.confirm(`Are you sure you want to log in as user "${targetName}"?\n\nYou will be logged into their account, able to view and manage their dashboard, and buy/sell on their behalf. You can switch back to your Admin account at any time.`)) return;
+
+    try {
+      const currentAdminUser = localStorage.getItem('spiral_user');
+      const currentAdminToken = localStorage.getItem('spiral_auth_token');
+      
+      if (currentAdminUser) {
+        localStorage.setItem('spiral_admin_user', currentAdminUser);
+      }
+      if (currentAdminToken) {
+        localStorage.setItem('spiral_admin_token', currentAdminToken);
+      }
+      
+      const targetId = targetUser.id || (targetUser as any).uid || (targetUser as any).$id;
+      const cleanTargetUser = {
+        ...targetUser,
+        id: targetId,
+        user_id: targetUser.user_id || targetId,
+      };
+      
+      localStorage.setItem('spiral_user', JSON.stringify(cleanTargetUser));
+      localStorage.setItem('spiral_auth_token', targetId);
+      
+      window.location.reload();
+    } catch (e: any) {
+      setStatusMsg({ type: 'error', text: e.message || 'Failed to switch user' });
+      setTimeout(() => setStatusMsg(null), 3000);
+    }
+  };
+
   const handleDeleteUser = async (userId: string, userName: string) => {
     if (!window.confirm(`⚠️ WARNING ⚠️\n\nAre you sure you want to permanently delete user "${userName}"?\n\nThis will delete:\n1. Mainframe Auth credentials\n2. User SQL Profile record\n3. User Wallet record\n4. Active packages and transaction histories\n\nThis action cannot be undone! Proceed?`)) return;
 
@@ -764,6 +796,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                           className="p-2 text-slate-500 hover:text-cyan-400 transition-colors"
                         >
                           <Info size={16} />
+                        </button>
+                        <button 
+                          onClick={() => handleImpersonate(u)}
+                          title="Login as User (Impersonate)" 
+                          className="p-2 text-slate-500 hover:text-amber-500 transition-colors"
+                        >
+                          <Zap size={16} />
                         </button>
                       </td>
                     </tr>
