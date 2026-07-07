@@ -927,11 +927,11 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
             if (matrixPayout > 0) {
                 await distributeIncomeServer(matrixParentUid, matrixPayout, 'matrix_income', `Placement bonus: Node $${price} from ${profile.name}`, userId);
 
-                // Distribute 10% of matrixPayout to matrixParentUid's upline (up to 10 levels)
+                // Distribute 10% of matrixPayout to matrixParentUid's upline (up to 10 levels) in the matrix tree
                 let matrixUplineId = '1';
                 const recipientUser = await fetchUserById(matrixParentUid);
                 if (recipientUser) {
-                    matrixUplineId = recipientUser.referredBy || '1';
+                    matrixUplineId = recipientUser.matrixParentId || '1';
                 }
                 const uplinePayout = Number((matrixPayout * 0.10).toFixed(4));
                 if (uplinePayout > 0) {
@@ -947,7 +947,7 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
                         );
                         if (matrixUplineId === '1') break;
                         const parentDoc = await fetchUserById(matrixUplineId);
-                        matrixUplineId = parentDoc?.referredBy || '1';
+                        matrixUplineId = parentDoc?.matrixParentId || '1';
                     }
                 }
             }
