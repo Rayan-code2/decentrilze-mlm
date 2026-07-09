@@ -669,7 +669,7 @@ app.get('/api/packages', async (req: any, res: any) => {
     try {
         let list = await db.select().from(mlmPackages).orderBy(asc(mlmPackages.price));
         if (list.length === 0) {
-            await db.insert(mlmPackages).values({ name: 'Starter Node', price: 10.0, dailyRoi: 0.1, roiIntervalMinutes: 1440, maxRoiPercent: 250.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[0.5,0.5,1,1,0.5,0.2,0.2,0.2,0.2,0.2]', levelLockLimit: 3 });
+            await db.insert(mlmPackages).values({ name: 'Starter Node', price: 10.0, dailyRoi: 0.1, roiIntervalMinutes: 1440, maxRoiPercent: 250.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,2,2,2,7,8,15,20]', levelLockLimit: 3 });
             await db.insert(mlmPackages).values({ name: 'Pro Node', price: 20.0, dailyRoi: 0.2, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,1,1,1,1,1,1,1]', levelLockLimit: 6 });
             await db.insert(mlmPackages).values({ name: 'Elite Node', price: 30.0, dailyRoi: 0.3, roiIntervalMinutes: 1440, maxRoiPercent: 1000.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,2,2,2,2,2,2,7]', levelLockLimit: 8 });
             await db.insert(mlmPackages).values({ name: 'Whale Node', price: 40.0, dailyRoi: 0.4, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,2,2,3,3,3,4,4,15]', levelLockLimit: 10 });

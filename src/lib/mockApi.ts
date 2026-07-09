@@ -65,7 +65,7 @@ export const mockApi = {
   db: {
     getPackages: async (): Promise<MLMPackage[]> => {
       const defaultPackages: MLMPackage[] = [
-        { id: 'pkg1', name: 'Starter Node', price: 10, daily_roi: 0.10, duration_days: 365, direct_income_percent: 20, matrix_income_percent: 10, level_income_percents: [0.5, 0.5, 1, 1, 0.5, 0.2, 0.2, 0.2, 0.2, 0.2], level_lock_limit: 3, levelLockLimit: 3, is_active: true },
+        { id: 'pkg1', name: 'Starter Node', price: 10, daily_roi: 0.10, duration_days: 365, direct_income_percent: 20, matrix_income_percent: 10, level_income_percents: [1, 1, 1, 2, 2, 2, 7, 8, 15, 20], level_lock_limit: 3, levelLockLimit: 3, is_active: true },
         { id: 'pkg2', name: 'Pro Node', price: 20, daily_roi: 0.20, duration_days: 365, direct_income_percent: 20, matrix_income_percent: 10, level_income_percents: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], level_lock_limit: 6, levelLockLimit: 6, is_active: true },
         { id: 'pkg3', name: 'Elite Node', price: 30, daily_roi: 0.30, duration_days: 365, direct_income_percent: 20, matrix_income_percent: 10, level_income_percents: [1, 1, 1, 2, 2, 2, 2, 2, 2, 7], level_lock_limit: 8, levelLockLimit: 8, is_active: true },
         { id: 'pkg4', name: 'Whale Node', price: 40, daily_roi: 0.40, duration_days: 365, direct_income_percent: 20, matrix_income_percent: 10, level_income_percents: [1, 1, 2, 2, 3, 3, 3, 4, 4, 15], level_lock_limit: 10, levelLockLimit: 10, is_active: true },

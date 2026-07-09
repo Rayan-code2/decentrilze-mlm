@@ -751,7 +751,7 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
           const label = activeTab === 'matrix' ? 'Matrix Level' : 'Generation';
           const prefix = activeTab === 'matrix' ? 'L' : 'G';
           const packageIncomes: { [key: number]: number[] } = {
-            10: [0.5, 0.5, 1, 1, 0.5, 0.2, 0.2, 0.2, 0.2, 0.2],
+            10: [1, 1, 1, 2, 2, 2, 7, 8, 15, 20],
             20: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
             30: [1, 1, 1, 2, 2, 2, 2, 2, 2, 7],
             40: [1, 1, 2, 2, 3, 3, 3, 4, 4, 15]
@@ -774,10 +774,16 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
                   <div className="space-y-1">
                     <p className="text-[7px] font-black text-slate-muted uppercase tracking-widest leading-none">{label} {lvl}</p>
                     <div className="flex flex-wrap gap-x-2 gap-y-0.5 max-w-[130px] pt-1">
-                      <span className="text-[9px] font-black text-emerald-400 font-mono">$10:{stats?.pkg10 || 0}</span>
-                      <span className="text-[9px] font-black text-cyan-400 font-mono">$20:{stats?.pkg20 || 0}</span>
-                      <span className="text-[9px] font-black text-amber-400 font-mono">$30:{stats?.pkg30 || 0}</span>
-                      <span className="text-[9px] font-black text-rose-400 font-mono">$40:{stats?.pkg40 || 0}</span>
+                      {activeTab === 'matrix' ? (
+                        <span className="text-[9px] font-black text-emerald-400 font-mono">$10 Nodes:{stats?.pkg10 || 0}</span>
+                      ) : (
+                        <>
+                          <span className="text-[9px] font-black text-emerald-400 font-mono">$10:{stats?.pkg10 || 0}</span>
+                          <span className="text-[9px] font-black text-cyan-400 font-mono">$20:{stats?.pkg20 || 0}</span>
+                          <span className="text-[9px] font-black text-amber-400 font-mono">$30:{stats?.pkg30 || 0}</span>
+                          <span className="text-[9px] font-black text-rose-400 font-mono">$40:{stats?.pkg40 || 0}</span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -787,24 +793,33 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
                 </div>
               </div>
               
-              <div className="pt-2 border-t border-white/5 grid grid-cols-2 gap-x-2 gap-y-1 relative z-10 text-[8px] leading-tight">
-                <div className="flex justify-between items-center bg-emerald-500/5 px-1.5 py-0.5 rounded">
-                  <span className="text-slate-400 font-bold block">In ($10)</span>
-                  <span className="font-mono font-black text-emerald-400">${packageIncomes[10][lvl - 1].toFixed(2)}</span>
+              {activeTab === 'matrix' ? (
+                <div className="pt-2 border-t border-white/5 flex justify-between items-center relative z-10 text-[8px] leading-tight">
+                  <div className="flex justify-between items-center bg-emerald-500/5 px-3 py-1.5 rounded w-full">
+                    <span className="text-slate-400 font-bold block">In ($10) Package</span>
+                    <span className="font-mono font-black text-emerald-400 text-xs">${packageIncomes[10][lvl - 1].toFixed(2)}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center bg-cyan-500/5 px-1.5 py-0.5 rounded">
-                  <span className="text-slate-400 font-bold block">In ($20)</span>
-                  <span className="font-mono font-black text-cyan-400">${packageIncomes[20][lvl - 1].toFixed(2)}</span>
+              ) : (
+                <div className="pt-2 border-t border-white/5 grid grid-cols-2 gap-x-2 gap-y-1 relative z-10 text-[8px] leading-tight">
+                  <div className="flex justify-between items-center bg-emerald-500/5 px-1.5 py-0.5 rounded">
+                    <span className="text-slate-400 font-bold block">In ($10)</span>
+                    <span className="font-mono font-black text-emerald-400">${packageIncomes[10][lvl - 1].toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-cyan-500/5 px-1.5 py-0.5 rounded">
+                    <span className="text-slate-400 font-bold block">In ($20)</span>
+                    <span className="font-mono font-black text-cyan-400">${packageIncomes[20][lvl - 1].toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-amber-500/5 px-1.5 py-0.5 rounded">
+                    <span className="text-slate-400 font-bold block">In ($30)</span>
+                    <span className="font-mono font-black text-amber-400">${packageIncomes[30][lvl - 1].toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-rose-500/5 px-1.5 py-0.5 rounded">
+                    <span className="text-slate-400 font-bold block">In ($40)</span>
+                    <span className="font-mono font-black text-rose-400">${packageIncomes[40][lvl - 1].toFixed(2)}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center bg-amber-500/5 px-1.5 py-0.5 rounded">
-                  <span className="text-slate-400 font-bold block">In ($30)</span>
-                  <span className="font-mono font-black text-amber-400">${packageIncomes[30][lvl - 1].toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center bg-rose-500/5 px-1.5 py-0.5 rounded">
-                  <span className="text-slate-400 font-bold block">In ($40)</span>
-                  <span className="font-mono font-black text-rose-400">${packageIncomes[40][lvl - 1].toFixed(2)}</span>
-                </div>
-              </div>
+              )}
             </button>
           );
         })}
