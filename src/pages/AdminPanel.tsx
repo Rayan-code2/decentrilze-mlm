@@ -1112,6 +1112,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                     direct_income_percent: 0,
                     matrix_income_percent: 0,
                     level_income_percents: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    level_lock_limit: 10,
                     is_active: true
                   })}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-red-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-red-400 transition-all"
@@ -1210,6 +1211,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                         className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs text-white" 
                         required
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-2">Level Income Unlocked Limit</label>
+                      <p className="text-[8px] text-slate-600 px-2 leading-tight">Specify maximum level commissions unlocked by this package.</p>
+                      <select 
+                        value={editingPackage.level_lock_limit !== undefined ? editingPackage.level_lock_limit : (editingPackage.levelLockLimit !== undefined ? editingPackage.levelLockLimit : 10)}
+                        onChange={e => setEditingPackage({...editingPackage, level_lock_limit: Number(e.target.value), levelLockLimit: Number(e.target.value)})}
+                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-red-500/50 font-medium"
+                      >
+                        <option value="0" className="bg-slate-900 text-white">0 Levels (Fully Locked)</option>
+                        <option value="1" className="bg-slate-900 text-white">Level 1 Only</option>
+                        <option value="2" className="bg-slate-900 text-white">Level 1 to 2</option>
+                        <option value="3" className="bg-slate-900 text-white">Level 1 to 3 ($10 standard)</option>
+                        <option value="4" className="bg-slate-900 text-white">Level 1 to 4</option>
+                        <option value="5" className="bg-slate-900 text-white">Level 1 to 5</option>
+                        <option value="6" className="bg-slate-900 text-white">Level 1 to 6 ($20 standard)</option>
+                        <option value="7" className="bg-slate-900 text-white">Level 1 to 7</option>
+                        <option value="8" className="bg-slate-900 text-white">Level 1 to 8 ($30 standard)</option>
+                        <option value="9" className="bg-slate-900 text-white">Level 1 to 9</option>
+                        <option value="10" className="bg-slate-900 text-white">Level 1 to 10 (Full depth / unlimited)</option>
+                      </select>
                     </div>
                     <div className="flex items-center gap-3 pt-8">
                       <input 
@@ -1442,6 +1464,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                            ))}
                           <span className="text-[7px] text-slate-500">...</span>
                         </div>
+                      </div>
+                      <div className="flex justify-between text-[10px]">
+                        <span className="text-slate-500 font-bold uppercase tracking-widest">Unlocked Levels</span>
+                        <span className="text-pink-400 font-black">
+                          {pkg.level_lock_limit === 0 || pkg.levelLockLimit === 0 
+                            ? '0 Levels (Locked)' 
+                            : pkg.level_lock_limit === 10 || pkg.levelLockLimit === 10 || pkg.level_lock_limit === undefined || pkg.level_lock_limit === -1
+                            ? '10 Levels (Full)'
+                            : `1 to ${pkg.level_lock_limit !== undefined ? pkg.level_lock_limit : pkg.levelLockLimit}`}
+                        </span>
                       </div>
                       <div className="flex justify-between text-[10px]">
                         <span className="text-slate-500 font-bold uppercase tracking-widest">Placement</span>

@@ -12,6 +12,8 @@ export interface MLMPackage {
   direct_income_percent: number;
   matrix_income_percent: number;
   level_income_percents: number[];
+  level_lock_limit?: number;
+  levelLockLimit?: number;
   is_active: boolean;
 }
 

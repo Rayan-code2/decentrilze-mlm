@@ -594,6 +594,8 @@ function normalizePackage(p: any) {
         matrixIncomePercent: p.matrixIncomePercent !== undefined ? p.matrixIncomePercent : p.matrix_income_percent,
         roiIntervalMinutes: p.roiIntervalMinutes !== undefined ? p.roiIntervalMinutes : p.roi_interval_minutes,
         maxRoiPercent: p.maxRoiPercent !== undefined ? p.maxRoiPercent : p.max_roi_percent,
+        level_lock_limit: p.levelLockLimit !== undefined ? p.levelLockLimit : p.level_lock_limit,
+        levelLockLimit: p.levelLockLimit !== undefined ? p.levelLockLimit : p.level_lock_limit,
         isActive: p.isActive !== undefined ? p.isActive : p.is_active
     };
 }
@@ -667,24 +669,24 @@ app.get('/api/packages', async (req: any, res: any) => {
     try {
         let list = await db.select().from(mlmPackages).orderBy(asc(mlmPackages.price));
         if (list.length === 0) {
-            await db.insert(mlmPackages).values({ name: 'Starter Node', price: 10.0, dailyRoi: 0.1, roiIntervalMinutes: 1440, maxRoiPercent: 250.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[0.5,0.5,1,1,0.5,0.2,0.2,0.2,0.2,0.2]' });
-            await db.insert(mlmPackages).values({ name: 'Pro Node', price: 20.0, dailyRoi: 0.2, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,1,1,1,1,1,1,1]' });
-            await db.insert(mlmPackages).values({ name: 'Elite Node', price: 30.0, dailyRoi: 0.3, roiIntervalMinutes: 1440, maxRoiPercent: 1000.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,2,2,2,2,2,2,7]' });
-            await db.insert(mlmPackages).values({ name: 'Whale Node', price: 40.0, dailyRoi: 0.4, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,2,2,3,3,3,4,4,15]' });
+            await db.insert(mlmPackages).values({ name: 'Starter Node', price: 10.0, dailyRoi: 0.1, roiIntervalMinutes: 1440, maxRoiPercent: 250.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[0.5,0.5,1,1,0.5,0.2,0.2,0.2,0.2,0.2]', levelLockLimit: 3 });
+            await db.insert(mlmPackages).values({ name: 'Pro Node', price: 20.0, dailyRoi: 0.2, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,1,1,1,1,1,1,1]', levelLockLimit: 6 });
+            await db.insert(mlmPackages).values({ name: 'Elite Node', price: 30.0, dailyRoi: 0.3, roiIntervalMinutes: 1440, maxRoiPercent: 1000.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,2,2,2,2,2,2,7]', levelLockLimit: 8 });
+            await db.insert(mlmPackages).values({ name: 'Whale Node', price: 40.0, dailyRoi: 0.4, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,2,2,3,3,3,4,4,15]', levelLockLimit: 10 });
             list = await db.select().from(mlmPackages).orderBy(asc(mlmPackages.price));
         } else {
             // If 20, 30 or 40 are missing, insert them
             const has20 = list.some(p => Math.floor(Number(p.price)) === 20);
             if (!has20) {
-                await db.insert(mlmPackages).values({ name: 'Pro Node', price: 20.0, dailyRoi: 0.2, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,1,1,1,1,1,1,1]' });
+                await db.insert(mlmPackages).values({ name: 'Pro Node', price: 20.0, dailyRoi: 0.2, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,1,1,1,1,1,1,1]', levelLockLimit: 6 });
             }
             const has30 = list.some(p => Math.floor(Number(p.price)) === 30);
             if (!has30) {
-                await db.insert(mlmPackages).values({ name: 'Elite Node', price: 30.0, dailyRoi: 0.3, roiIntervalMinutes: 1440, maxRoiPercent: 1000.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,2,2,2,2,2,2,7]' });
+                await db.insert(mlmPackages).values({ name: 'Elite Node', price: 30.0, dailyRoi: 0.3, roiIntervalMinutes: 1440, maxRoiPercent: 1000.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,2,2,2,2,2,2,7]', levelLockLimit: 8 });
             }
             const has40 = list.some(p => Math.floor(Number(p.price)) === 40);
             if (!has40) {
-                await db.insert(mlmPackages).values({ name: 'Whale Node', price: 40.0, dailyRoi: 0.4, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,2,2,3,3,3,4,4,15]' });
+                await db.insert(mlmPackages).values({ name: 'Whale Node', price: 40.0, dailyRoi: 0.4, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,2,2,3,3,3,4,4,15]', levelLockLimit: 10 });
             }
             
             if (!has20 || !has30 || !has40) {
@@ -725,6 +727,7 @@ app.post('/api/admin/save-package', verifyAdmin, async (req: any, res: any) => {
                         : (typeof pkg.levelIncomePercents === 'string'
                             ? pkg.levelIncomePercents
                             : JSON.stringify([])))),
+            levelLockLimit: parseInt(pkg.level_lock_limit !== undefined ? pkg.level_lock_limit : (pkg.levelLockLimit !== undefined ? pkg.levelLockLimit : 10), 10),
             isActive: pkg.is_active !== undefined ? pkg.is_active : (pkg.isActive !== undefined ? pkg.isActive : true)
         };
 
@@ -980,17 +983,17 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
                     return 0; // No active package = no level income
                 }
                 
-                const maxPrice = Math.max(...activePurchases.map(p => Number(p.price || 0)));
-                if (maxPrice >= 40) {
-                    return 10; // Unlimited / full levels
-                } else if (maxPrice >= 30) {
-                    return 8;
-                } else if (maxPrice >= 20) {
-                    return 6;
-                } else if (maxPrice >= 10) {
-                    return 3;
+                // Retrieve all packages to find active package configurations
+                const allPkgs = await db.select().from(mlmPackages);
+                let maxLimit = 0;
+                for (const active of activePurchases) {
+                    const pkg = allPkgs.find(p => p.id === active.packageId);
+                    const limitOfPkg = pkg ? (pkg.levelLockLimit !== undefined ? pkg.levelLockLimit : 10) : 10;
+                    if (limitOfPkg > maxLimit) {
+                        maxLimit = limitOfPkg;
+                    }
                 }
-                return 0;
+                return maxLimit;
             } catch (err) {
                 console.error(`Error in getUserLevelIncomeLimit for ${uId}:`, err);
                 return 0;
@@ -1855,6 +1858,7 @@ async function verifyAndHealPostgresSchema() {
         `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "direct_income_percent" double precision NOT NULL DEFAULT 0.0;`,
         `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "matrix_income_percent" double precision NOT NULL DEFAULT 0.0;`,
         `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "level_income_percents" text NOT NULL DEFAULT '[]';`,
+        `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "level_lock_limit" integer NOT NULL DEFAULT 10;`,
         `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "is_active" boolean NOT NULL DEFAULT true;`,
         `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();`,
         `ALTER TABLE "purchases" ADD COLUMN IF NOT EXISTS "daily_roi" double precision;`,

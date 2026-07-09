@@ -55,6 +55,7 @@ export const mlmPackages = pgTable('packages', {
   directIncomePercent: doublePrecision('direct_income_percent').notNull().default(0.0),
   matrixIncomePercent: doublePrecision('matrix_income_percent').notNull().default(0.0),
   levelIncomePercents: text('level_income_percents').notNull().default('[]'),
+  levelLockLimit: integer('level_lock_limit').notNull().default(10),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').defaultNow(),
 });
