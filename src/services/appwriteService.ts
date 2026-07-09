@@ -429,7 +429,7 @@ export const appwriteService = {
     }
   },
 
-  updateUser: async (userId: string, data: { name?: string, password?: string, personal_business?: number, team_business?: number, mobile?: string, role?: string, isActive?: boolean }) => {
+  updateUser: async (userId: string, data: { name?: string, password?: string, personal_business?: number, team_business?: number, mobile?: string, role?: string, isActive?: boolean, levelLockLimit?: number, referredBy?: string, matrixParentId?: string }) => {
     try {
       const response = await fetch('/api/admin/update-user', {
         method: 'POST',

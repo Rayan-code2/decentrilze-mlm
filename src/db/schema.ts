@@ -15,6 +15,7 @@ export const users = pgTable('users', {
   matrixParentId: text('matrix_parent_id'),
   globalRank: integer('global_rank'),
   nodeId: text('node_id'),
+  levelLockLimit: integer('level_lock_limit').notNull().default(-1),
   personalBusiness: doublePrecision('personal_business').notNull().default(0.0),
   teamBusiness: doublePrecision('team_business').notNull().default(0.0),
   mobile: text('mobile'),

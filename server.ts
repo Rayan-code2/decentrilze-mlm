@@ -98,6 +98,9 @@ function normalizeUser(u: any) {
         node_id: u.nodeId !== undefined ? u.nodeId : u.node_id,
         nodeId: u.nodeId !== undefined ? u.nodeId : u.node_id,
         
+        level_lock_limit: u.levelLockLimit !== undefined ? u.levelLockLimit : u.level_lock_limit,
+        levelLockLimit: u.levelLockLimit !== undefined ? u.levelLockLimit : u.level_lock_limit,
+        
         personal_business: u.personalBusiness !== undefined ? u.personalBusiness : u.personal_business,
         personalBusiness: u.personalBusiness !== undefined ? u.personalBusiness : u.personal_business,
         
@@ -953,12 +956,58 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
             }
         }
 
+        // Helper to find a user's level income limit based on admin override or active packages
+        const getUserLevelIncomeLimit = async (uId: string): Promise<number> => {
+            if (uId === '1') return 10; // Root user has no restriction
+            try {
+                const userDoc = await fetchUserById(uId);
+                if (!userDoc) return 0;
+                
+                // 1. Check manual override from admin
+                const manualLimit = userDoc.levelLockLimit !== undefined ? userDoc.levelLockLimit : -1;
+                if (manualLimit >= 0) {
+                    return manualLimit;
+                }
+                
+                // 2. Otherwise auto-calculate based on active packages
+                const activePurchases = await db.select().from(purchases).where(
+                    and(
+                        eq(purchases.userId, uId),
+                        eq(purchases.isActive, true)
+                    )
+                );
+                if (activePurchases.length === 0) {
+                    return 0; // No active package = no level income
+                }
+                
+                const maxPrice = Math.max(...activePurchases.map(p => Number(p.price || 0)));
+                if (maxPrice >= 40) {
+                    return 10; // Unlimited / full levels
+                } else if (maxPrice >= 30) {
+                    return 8;
+                } else if (maxPrice >= 20) {
+                    return 6;
+                } else if (maxPrice >= 10) {
+                    return 3;
+                }
+                return 0;
+            } catch (err) {
+                console.error(`Error in getUserLevelIncomeLimit for ${uId}:`, err);
+                return 0;
+            }
+        };
+
         let currLevelId = profile.referredBy || '1';
         for (let l = 1; l <= Math.min(10, levelPercents.length); l++) {
             if (!currLevelId || currLevelId === '0' || currLevelId === userId) break;
             const depthAmt = Number(levelPercents[l - 1] || 0);
             if (depthAmt > 0) {
-                await distributeIncomeServer(currLevelId, depthAmt, 'level_income', `Level ${l} commission: Node $${price} from ${profile.name}`, userId, l);
+                const limit = await getUserLevelIncomeLimit(currLevelId);
+                if (l <= limit) {
+                    await distributeIncomeServer(currLevelId, depthAmt, 'level_income', `Level ${l} commission: Node $${price} from ${profile.name}`, userId, l);
+                } else {
+                    console.log(`[Level Income Locked] Skipped level ${l} payout for user ${currLevelId} because their level limit is ${limit}`);
+                }
             }
             if (currLevelId === '1') break;
             const parentDoc = await fetchUserById(currLevelId);
@@ -1212,6 +1261,10 @@ app.post('/api/admin/update-user', verifyAdmin, async (req: any, res: any) => {
         if (data.isBlocked !== undefined) payload.isBlocked = !!data.isBlocked;
         if (data.isActive !== undefined) payload.isActive = !!data.isActive;
         if (data.role !== undefined) payload.role = data.role;
+        if (data.levelLockLimit !== undefined || data.level_lock_limit !== undefined) {
+            const val = data.levelLockLimit !== undefined ? data.levelLockLimit : data.level_lock_limit;
+            payload.levelLockLimit = val !== null && val !== undefined ? Number(val) : -1;
+        }
         if (data.password !== undefined && data.password !== '') {
             payload.password = hashPassword(data.password);
         }
@@ -1779,6 +1832,7 @@ async function verifyAndHealPostgresSchema() {
         `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "matrix_parent_id" text;`,
         `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "global_rank" integer;`,
         `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "node_id" text;`,
+        `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "level_lock_limit" integer NOT NULL DEFAULT -1;`,
         `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "personal_business" double precision NOT NULL DEFAULT 0.0;`,
         `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "team_business" double precision NOT NULL DEFAULT 0.0;`,
         `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "mobile" text;`,

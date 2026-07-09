@@ -310,6 +310,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
     const userIsActive = formData.get('userIsActive') !== null;
     const userReferredBy = formData.get('userReferredBy') as string;
     const userMatrixParentId = formData.get('userMatrixParentId') as string;
+    const userLevelLockLimit = formData.get('userLevelLockLimit') !== null ? Number(formData.get('userLevelLockLimit')) : -1;
     const walletBalanceRaw = formData.get('userWalletBalance');
     const walletBalance = (walletBalanceRaw !== null && walletBalanceRaw !== '') ? Number(walletBalanceRaw) : undefined;
 
@@ -330,6 +331,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
         isActive: userIsActive,
         referredBy: userReferredBy,
         matrixParentId: userMatrixParentId,
+        levelLockLimit: userLevelLockLimit,
       });
 
       if (res.success && walletBalance !== undefined && !isNaN(walletBalance)) {
@@ -2381,6 +2383,31 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                 </select>
               </div>
 
+              <div className="space-y-2">
+                <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-2">Level Income Lock Limit</label>
+                <select 
+                  name="userLevelLockLimit"
+                  defaultValue={editingUser.levelLockLimit !== undefined ? editingUser.levelLockLimit : (editingUser.level_lock_limit !== undefined ? editingUser.level_lock_limit : -1)}
+                  className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:border-emerald-500/50 outline-none transition-colors font-medium"
+                >
+                  <option value="-1" className="bg-slate-900 text-white">Auto-Calculate (By Package Price)</option>
+                  <option value="0" className="bg-slate-900 text-white">0 Levels (Fully Locked)</option>
+                  <option value="1" className="bg-slate-900 text-white">Level 1 Only</option>
+                  <option value="2" className="bg-slate-900 text-white">Level 1 to 2</option>
+                  <option value="3" className="bg-slate-900 text-white">Level 1 to 3 ($10 standard limit)</option>
+                  <option value="4" className="bg-slate-900 text-white">Level 1 to 4</option>
+                  <option value="5" className="bg-slate-900 text-white">Level 1 to 5</option>
+                  <option value="6" className="bg-slate-900 text-white">Level 1 to 6 ($20 standard limit)</option>
+                  <option value="7" className="bg-slate-900 text-white">Level 1 to 7</option>
+                  <option value="8" className="bg-slate-900 text-white">Level 1 to 8 ($30 standard limit)</option>
+                  <option value="9" className="bg-slate-900 text-white">Level 1 to 9</option>
+                  <option value="10" className="bg-slate-900 text-white">Level 1 to 10 (Unlimited)</option>
+                </select>
+                <p className="text-[9px] text-slate-500 ml-2">
+                  Auto-Calculate restricts levels by active package size: $10 Node = 3 levels, $20 Node = 6 levels, $30 Node = 8 levels, $40+ Node = unlimited (10 levels). Any other option overrides package rules.
+                </p>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-2">Sponsor/Referrer (UID, email or ID)</label>
@@ -2532,6 +2559,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
               <div>
                 <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Mobile Number</p>
                 <p className="text-white text-xs font-bold font-mono mt-1">{viewingUser.mobile || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Level Income Lock</p>
+                <p className="text-cyan-400 text-xs font-bold mt-1">
+                  {viewingUser.levelLockLimit === -1 || viewingUser.level_lock_limit === -1 || viewingUser.levelLockLimit === undefined || viewingUser.level_lock_limit === undefined
+                    ? 'Auto (By Package)'
+                    : viewingUser.levelLockLimit === 0 || viewingUser.level_lock_limit === 0
+                    ? '0 Levels (Locked)'
+                    : `Level 1 to ${viewingUser.levelLockLimit !== undefined ? viewingUser.levelLockLimit : viewingUser.level_lock_limit}`}
+                </p>
               </div>
               <div>
                 <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Joined Date</p>
