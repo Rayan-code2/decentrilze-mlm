@@ -669,29 +669,18 @@ app.get('/api/packages', async (req: any, res: any) => {
     try {
         let list = await db.select().from(mlmPackages).orderBy(asc(mlmPackages.price));
         if (list.length === 0) {
-            await db.insert(mlmPackages).values({ name: 'Starter Node', price: 10.0, dailyRoi: 0.1, roiIntervalMinutes: 1440, maxRoiPercent: 250.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,2,2,2,7,8,15,20]', levelLockLimit: 3 });
-            await db.insert(mlmPackages).values({ name: 'Pro Node', price: 20.0, dailyRoi: 0.2, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,1,1,1,1,1,1,1]', levelLockLimit: 6 });
-            await db.insert(mlmPackages).values({ name: 'Elite Node', price: 30.0, dailyRoi: 0.3, roiIntervalMinutes: 1440, maxRoiPercent: 1000.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,2,2,2,2,2,2,7]', levelLockLimit: 8 });
-            await db.insert(mlmPackages).values({ name: 'Whale Node', price: 40.0, dailyRoi: 0.4, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,2,2,3,3,3,4,4,15]', levelLockLimit: 10 });
+            await db.insert(mlmPackages).values({ name: 'Starter Node', price: 10.0, dailyRoi: 0.1, roiIntervalMinutes: 1440, maxRoiPercent: 250.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[0.5,0.5,0.5,1,1,1,2,2,5,5]', levelLockLimit: 3 });
+            await db.insert(mlmPackages).values({ name: 'Pro Node', price: 20.0, dailyRoi: 0.2, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,2,2,2,4,4,10,10]', levelLockLimit: 6 });
+            await db.insert(mlmPackages).values({ name: 'Elite Node', price: 30.0, dailyRoi: 0.3, roiIntervalMinutes: 1440, maxRoiPercent: 1000.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1.5,1.5,1.5,3,3,3,6,6,15,15]', levelLockLimit: 8 });
+            await db.insert(mlmPackages).values({ name: 'Whale Node', price: 40.0, dailyRoi: 0.4, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[2,2,2,4,4,4,8,8,20,20]', levelLockLimit: 10 });
             list = await db.select().from(mlmPackages).orderBy(asc(mlmPackages.price));
         } else {
-            // If 20, 30 or 40 are missing, insert them
-            const has20 = list.some(p => Math.floor(Number(p.price)) === 20);
-            if (!has20) {
-                await db.insert(mlmPackages).values({ name: 'Pro Node', price: 20.0, dailyRoi: 0.2, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,1,1,1,1,1,1,1]', levelLockLimit: 6 });
-            }
-            const has30 = list.some(p => Math.floor(Number(p.price)) === 30);
-            if (!has30) {
-                await db.insert(mlmPackages).values({ name: 'Elite Node', price: 30.0, dailyRoi: 0.3, roiIntervalMinutes: 1440, maxRoiPercent: 1000.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,2,2,2,2,2,2,7]', levelLockLimit: 8 });
-            }
-            const has40 = list.some(p => Math.floor(Number(p.price)) === 40);
-            if (!has40) {
-                await db.insert(mlmPackages).values({ name: 'Whale Node', price: 40.0, dailyRoi: 0.4, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,2,2,3,3,3,4,4,15]', levelLockLimit: 10 });
-            }
-            
-            if (!has20 || !has30 || !has40) {
-                list = await db.select().from(mlmPackages).orderBy(asc(mlmPackages.price));
-            }
+            // Auto-update existing packages to the correct latest plan so the user does not have to edit them manually
+            await db.update(mlmPackages).set({ levelIncomePercents: '[0.5,0.5,0.5,1,1,1,2,2,5,5]', levelLockLimit: 3 }).where(eq(mlmPackages.price, 10.0));
+            await db.update(mlmPackages).set({ levelIncomePercents: '[1,1,1,2,2,2,4,4,10,10]', levelLockLimit: 6 }).where(eq(mlmPackages.price, 20.0));
+            await db.update(mlmPackages).set({ levelIncomePercents: '[1.5,1.5,1.5,3,3,3,6,6,15,15]', levelLockLimit: 8 }).where(eq(mlmPackages.price, 30.0));
+            await db.update(mlmPackages).set({ levelIncomePercents: '[2,2,2,4,4,4,8,8,20,20]', levelLockLimit: 10 }).where(eq(mlmPackages.price, 40.0));
+            list = await db.select().from(mlmPackages).orderBy(asc(mlmPackages.price));
         }
         const packagesParsed = list.map(normalizePackage);
         res.json({ success: true, packages: packagesParsed });
@@ -842,6 +831,31 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
     const { userId: rawUserId, packageId } = req.body;
     try {
         const userId = await resolveUserAuthId(rawUserId) || rawUserId;
+
+        // Helper to find a user's maximum active package price (needed for size restriction)
+        const getUserMaxActivePackagePrice = async (uId: string): Promise<number> => {
+            if (uId === '1') return 999999; // Root user has no restriction
+            try {
+                const activePurchases = await db.select().from(purchases).where(
+                    and(
+                        eq(purchases.userId, uId),
+                        eq(purchases.isActive, true)
+                    )
+                );
+                if (activePurchases.length === 0) return 0;
+                let maxPrice = 0;
+                for (const active of activePurchases) {
+                    if (Number(active.price) > maxPrice) {
+                        maxPrice = Number(active.price);
+                    }
+                }
+                return maxPrice;
+            } catch (err) {
+                console.error(`Error in getUserMaxActivePackagePrice for ${uId}:`, err);
+                return 0;
+            }
+        };
+
         const [profile, wallet] = await Promise.all([fetchUserById(userId), fetchWallet(userId)]);
 
         if (!profile) return res.status(404).json({ success: false, message: 'User profile not found.' });
@@ -923,7 +937,13 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
         if (sponsorId && sponsorId !== '0') {
             const directPayout = Number(((price * (pkg.directIncomePercent || 0)) / 100).toFixed(4));
             if (directPayout > 0) {
-                await distributeIncomeServer(sponsorId, directPayout, 'direct_income', `Direct bonus: Node $${price} from ${profile.name}`, userId);
+                // Check if sponsor's package price is at least the purchased package price
+                const sponsorMaxPrice = await getUserMaxActivePackagePrice(sponsorId);
+                if (sponsorMaxPrice >= price) {
+                    await distributeIncomeServer(sponsorId, directPayout, 'direct_income', `Direct bonus: Node $${price} from ${profile.name}`, userId);
+                } else {
+                    console.log(`[Direct Income Skip] Sponsor ${sponsorId} has max package price ${sponsorMaxPrice} which is less than purchased package price ${price}`);
+                }
             }
         }
 
@@ -959,7 +979,7 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
             }
         }
 
-        // Helper to find a user's level income limit based on admin override or active packages
+        // Helper to find a user's level income limit based on admin override, active packages, and direct count
         const getUserLevelIncomeLimit = async (uId: string): Promise<number> => {
             if (uId === '1') return 10; // Root user has no restriction
             try {
@@ -972,7 +992,7 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
                     return manualLimit;
                 }
                 
-                // 2. Otherwise auto-calculate based on active packages
+                // 2. Otherwise auto-calculate based on active packages and direct count
                 const activePurchases = await db.select().from(purchases).where(
                     and(
                         eq(purchases.userId, uId),
@@ -983,17 +1003,42 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
                     return 0; // No active package = no level income
                 }
                 
-                // Retrieve all packages to find active package configurations
-                const allPkgs = await db.select().from(mlmPackages);
-                let maxLimit = 0;
+                // Find highest active package price
+                let maxPrice = 0;
                 for (const active of activePurchases) {
-                    const pkg = allPkgs.find(p => p.id === active.packageId);
-                    const limitOfPkg = pkg ? (pkg.levelLockLimit !== undefined ? pkg.levelLockLimit : 10) : 10;
-                    if (limitOfPkg > maxLimit) {
-                        maxLimit = limitOfPkg;
+                    if (Number(active.price) > maxPrice) {
+                        maxPrice = Number(active.price);
                     }
                 }
-                return maxLimit;
+
+                // Get actual direct referrals count
+                const directCountResult = await db.select()
+                    .from(users)
+                    .where(eq(users.referredBy, uId));
+                const directCount = directCountResult.length;
+
+                // Let's implement the customizable user plan from system settings
+                const systemSettings = await getServerSettings();
+                const defaultReqs = [
+                    { price: 10, directs: 0, levels: 3 },
+                    { price: 20, directs: 2, levels: 6 },
+                    { price: 30, directs: 3, levels: 8 },
+                    { price: 40, directs: 4, levels: 10 }
+                ];
+                const reqs = systemSettings && systemSettings.level_requirements && systemSettings.level_requirements.length > 0
+                    ? systemSettings.level_requirements
+                    : defaultReqs;
+
+                let calculatedLimit = 0;
+                for (const rule of reqs) {
+                    if (maxPrice >= Number(rule.price || 0) && directCount >= Number(rule.directs || 0)) {
+                        if (Number(rule.levels || 0) > calculatedLimit) {
+                            calculatedLimit = Number(rule.levels || 0);
+                        }
+                    }
+                }
+                
+                return calculatedLimit;
             } catch (err) {
                 console.error(`Error in getUserLevelIncomeLimit for ${uId}:`, err);
                 return 0;
@@ -1007,7 +1052,13 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
             if (depthAmt > 0) {
                 const limit = await getUserLevelIncomeLimit(currLevelId);
                 if (l <= limit) {
-                    await distributeIncomeServer(currLevelId, depthAmt, 'level_income', `Level ${l} commission: Node $${price} from ${profile.name}`, userId, l);
+                    // Check if level recipient's package price is at least the purchased package price
+                    const levelUserMaxPrice = await getUserMaxActivePackagePrice(currLevelId);
+                    if (levelUserMaxPrice >= price) {
+                        await distributeIncomeServer(currLevelId, depthAmt, 'level_income', `Level ${l} commission: Node $${price} from ${profile.name}`, userId, l);
+                    } else {
+                        console.log(`[Level Income Skip] User ${currLevelId} has max package price ${levelUserMaxPrice} which is less than purchased package price ${price}`);
+                    }
                 } else {
                     console.log(`[Level Income Locked] Skipped level ${l} payout for user ${currLevelId} because their level limit is ${limit}`);
                 }
@@ -1239,6 +1290,7 @@ app.post('/api/update-settings', verifyAdmin, async (req: any, res: any) => {
             signupBonus: Number(settings.signup_bonus || 0.0),
             rankRewards: typeof settings.rank_rewards === 'string' ? settings.rank_rewards : JSON.stringify(settings.rank_rewards || []),
             spinRewards: typeof settings.spin_rewards === 'string' ? settings.spin_rewards : JSON.stringify(settings.spin_rewards || []),
+            levelRequirementsJson: typeof settings.level_requirements === 'string' ? settings.level_requirements : JSON.stringify(settings.level_requirements || []),
         };
         if (exist.length > 0) {
             await db.update(settingsTable).set(payload).where(eq(settingsTable.id, exist[0].id));

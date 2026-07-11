@@ -7,7 +7,7 @@ import {
   Users, Settings as SettingsIcon, CreditCard, 
   CheckCircle2, XCircle, Search, Filter, 
   ChevronRight, ArrowRight, Shield, 
-  AlertCircle, Save, RefreshCcw, Package, Plus, Trash2, Edit2, Trophy, Database, AlertTriangle, Info, Zap, Clock, User as UserIcon, Copy
+  AlertCircle, Save, RefreshCcw, Package, Plus, Trash2, Edit2, Trophy, Database, AlertTriangle, Info, Zap, Clock, User as UserIcon, Copy, Lock, X
 } from 'lucide-react';
 
 interface AdminPanelProps {
@@ -1073,10 +1073,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                         }
 
                         const defaultPkgs = [
-                          { id: 'pkg1', name: 'Starter Node', price: 10, daily_roi: 0.10, roi_interval_minutes: 1440, duration_days: 365, max_roi_percent: 250, direct_income_percent: 20, matrix_income_percent: 10, level_income_percents: [0.5, 0.5, 1, 1, 0.5, 0.2, 0.2, 0.2, 0.2, 0.2], is_active: true },
-                          { id: 'pkg2', name: 'Pro Node', price: 20, daily_roi: 0.20, roi_interval_minutes: 1440, duration_days: 365, max_roi_percent: 0, direct_income_percent: 20, matrix_income_percent: 10, level_income_percents: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], is_active: true },
-                          { id: 'pkg3', name: 'Elite Node', price: 30, daily_roi: 0.30, roi_interval_minutes: 1440, duration_days: 365, max_roi_percent: 1000, direct_income_percent: 20, matrix_income_percent: 10, level_income_percents: [1, 1, 1, 2, 2, 2, 2, 2, 2, 7], is_active: true },
-                          { id: 'pkg4', name: 'Whale Node', price: 40, daily_roi: 0.40, roi_interval_minutes: 1440, duration_days: 365, max_roi_percent: 0, direct_income_percent: 20, matrix_income_percent: 10, level_income_percents: [1, 1, 2, 2, 3, 3, 3, 4, 4, 15], is_active: true }
+                          { id: 'pkg1', name: 'Starter Node', price: 10, daily_roi: 0.10, roi_interval_minutes: 1440, duration_days: 365, max_roi_percent: 250, direct_income_percent: 20, matrix_income_percent: 10, level_income_percents: [0.5, 0.5, 0.5, 1, 1, 1, 2, 2, 5, 5], is_active: true },
+                          { id: 'pkg2', name: 'Pro Node', price: 20, daily_roi: 0.20, roi_interval_minutes: 1440, duration_days: 365, max_roi_percent: 0, direct_income_percent: 20, matrix_income_percent: 10, level_income_percents: [1, 1, 1, 2, 2, 2, 4, 4, 10, 10], is_active: true },
+                          { id: 'pkg3', name: 'Elite Node', price: 30, daily_roi: 0.30, roi_interval_minutes: 1440, duration_days: 365, max_roi_percent: 1000, direct_income_percent: 20, matrix_income_percent: 10, level_income_percents: [1.5, 1.5, 1.5, 3, 3, 3, 6, 6, 15, 15], is_active: true },
+                          { id: 'pkg4', name: 'Whale Node', price: 40, daily_roi: 0.40, roi_interval_minutes: 1440, duration_days: 365, max_roi_percent: 0, direct_income_percent: 20, matrix_income_percent: 10, level_income_percents: [2, 2, 2, 4, 4, 4, 8, 8, 20, 20], is_active: true }
                         ];
                         
                         let successCount = 0;
@@ -2079,6 +2079,100 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                 )}
 
               </div>
+            </div>
+
+            {/* LEVEL LOCK REQUIREMENTS PROTOCOL */}
+            <div className="bg-black/40 p-6 rounded-3xl border border-white/5 space-y-6">
+              <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                <div className="flex items-center gap-3">
+                  <Lock size={20} className="text-red-500" />
+                  <div>
+                    <h3 className="text-white font-black text-sm italic uppercase tracking-tighter">Level Unlock Protocol</h3>
+                    <p className="text-[10px] text-slate-400">Configure level lock rules based on package price and direct referral targets.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const reqs = [...(settings.level_requirements || [])];
+                    reqs.push({ price: 0, directs: 0, levels: 0 });
+                    setSettings({ ...settings, level_requirements: reqs });
+                  }}
+                  className="px-4 py-2 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all"
+                >
+                  + Add Rule
+                </button>
+              </div>
+
+              {(settings.level_requirements || []).length === 0 ? (
+                <p className="text-xs text-slate-500 italic uppercase tracking-widest text-center py-4">No custom level unlock rules defined. System defaults will apply.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(settings.level_requirements || []).map((req, index) => (
+                    <div key={index} className="p-4 bg-black/20 rounded-2xl border border-white/5 relative group space-y-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const reqs = (settings.level_requirements || []).filter((_, i) => i !== index);
+                          setSettings({ ...settings, level_requirements: reqs });
+                        }}
+                        className="absolute top-3 right-3 text-slate-500 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+                        title="Remove Rule"
+                      >
+                        <X size={14} />
+                      </button>
+
+                      <p className="text-[9px] font-black text-red-500 uppercase tracking-widest">Rule #{index + 1}</p>
+                      
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[8px] font-black uppercase tracking-widest text-slate-500 ml-1">Min Price ($)</label>
+                          <input 
+                            type="number"
+                            value={req.price}
+                            onChange={(e) => {
+                              const reqs = [...(settings.level_requirements || [])];
+                              reqs[index] = { ...reqs[index], price: Number(e.target.value) };
+                              setSettings({ ...settings, level_requirements: reqs });
+                            }}
+                            className="w-full bg-black/40 border border-white/10 rounded-lg py-1.5 px-2 text-xs text-white"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[8px] font-black uppercase tracking-widest text-slate-500 ml-1">Min Directs</label>
+                          <input 
+                            type="number"
+                            value={req.directs}
+                            onChange={(e) => {
+                              const reqs = [...(settings.level_requirements || [])];
+                              reqs[index] = { ...reqs[index], directs: Number(e.target.value) };
+                              setSettings({ ...settings, level_requirements: reqs });
+                            }}
+                            className="w-full bg-black/40 border border-white/10 rounded-lg py-1.5 px-2 text-xs text-white"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[8px] font-black uppercase tracking-widest text-slate-500 ml-1">Open Levels</label>
+                          <input 
+                            type="number"
+                            min="0"
+                            max="10"
+                            value={req.levels}
+                            onChange={(e) => {
+                              const reqs = [...(settings.level_requirements || [])];
+                              reqs[index] = { ...reqs[index], levels: Number(e.target.value) };
+                              setSettings({ ...settings, level_requirements: reqs });
+                            }}
+                            className="w-full bg-black/40 border border-white/10 rounded-lg py-1.5 px-2 text-xs text-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="flex justify-between items-center bg-black/60 p-6 rounded-3xl border border-white/5 backdrop-blur-xl sticky bottom-0 z-20">

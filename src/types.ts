@@ -170,4 +170,5 @@ export interface Settings {
   enable_deposit: boolean;
   enable_withdrawal: boolean;
   roi_interval_minutes?: number;
+  level_requirements?: { price: number; directs: number; levels: number }[];
 }

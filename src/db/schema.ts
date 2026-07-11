@@ -139,5 +139,6 @@ export const settingsTable = pgTable('settings', {
   signupBonus: doublePrecision('signup_bonus').default(0.0),
   rankRewards: text('rank_rewards_json').default('[]'),
   spinRewards: text('spin_rewards_json').default('[]'),
+  levelRequirementsJson: text('level_requirements_json').default('[{"price":10,"directs":0,"levels":3},{"price":20,"directs":2,"levels":6},{"price":30,"directs":3,"levels":8},{"price":40,"directs":4,"levels":10}]'),
   createdAt: timestamp('created_at').defaultNow(),
 });

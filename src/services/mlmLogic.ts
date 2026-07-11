@@ -94,6 +94,12 @@ export async function getServerSettings(): Promise<any> {
         signup_bonus: s.signupBonus ?? 0.0,
         rank_rewards: s.rankRewards ? JSON.parse(s.rankRewards) : [],
         spin_rewards: s.spinRewards ? JSON.parse(s.spinRewards) : [],
+        level_requirements: s.levelRequirementsJson ? JSON.parse(s.levelRequirementsJson) : [
+          { price: 10, directs: 0, levels: 3 },
+          { price: 20, directs: 2, levels: 6 },
+          { price: 30, directs: 3, levels: 8 },
+          { price: 40, directs: 4, levels: 10 }
+        ],
       };
     }
 
@@ -145,6 +151,12 @@ export async function getServerSettings(): Promise<any> {
       signupBonus: 0.0,
       rankRewards: JSON.stringify(defaultRankRewards),
       spinRewards: JSON.stringify(defaultSpinRewards),
+      levelRequirementsJson: JSON.stringify([
+        { price: 10, directs: 0, levels: 3 },
+        { price: 20, directs: 2, levels: 6 },
+        { price: 30, directs: 3, levels: 8 },
+        { price: 40, directs: 4, levels: 10 }
+      ]),
     }).returning();
 
     return {
@@ -176,6 +188,12 @@ export async function getServerSettings(): Promise<any> {
       signup_bonus: 0.0,
       rank_rewards: defaultRankRewards,
       spin_rewards: defaultSpinRewards,
+      level_requirements: [
+        { price: 10, directs: 0, levels: 3 },
+        { price: 20, directs: 2, levels: 6 },
+        { price: 30, directs: 3, levels: 8 },
+        { price: 40, directs: 4, levels: 10 }
+      ],
     };
   } catch (error) {
     console.error('[getServerSettings Fail-safe Device]', error);
