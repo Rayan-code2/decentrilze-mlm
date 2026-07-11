@@ -1955,6 +1955,7 @@ async function verifyAndHealPostgresSchema() {
         `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "signup_bonus" double precision DEFAULT 0.0;`,
         `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "rank_rewards_json" text DEFAULT '[]';`,
         `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "spin_rewards_json" text DEFAULT '[]';`,
+        `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "level_requirements_json" text DEFAULT '[{"price":10,"directs":0,"levels":3},{"price":20,"directs":2,"levels":6},{"price":30,"directs":3,"levels":8},{"price":40,"directs":4,"levels":10}]';`,
         `ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();`,
     ];
 
