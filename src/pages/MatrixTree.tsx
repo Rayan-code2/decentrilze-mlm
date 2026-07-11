@@ -751,11 +751,22 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
           const label = activeTab === 'matrix' ? 'Matrix Level' : 'Generation';
           const prefix = activeTab === 'matrix' ? 'L' : 'G';
           const packageIncomes: { [key: number]: number[] } = {
-            10: [1, 1, 1, 2, 2, 2, 7, 8, 15, 20],
+            10: [0.5, 0.5, 0.5, 1, 1, 1, 2, 2, 3, 5],
             20: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
             30: [1, 1, 1, 2, 2, 2, 2, 2, 2, 7],
             40: [1, 1, 2, 2, 3, 3, 3, 4, 4, 15]
           };
+
+          let reqText = "";
+          if (lvl <= 3) {
+            reqText = "Unlock: $10 Pkg + 0 Direct";
+          } else if (lvl <= 6) {
+            reqText = "Unlock: $20 Pkg + 2 Directs";
+          } else if (lvl <= 8) {
+            reqText = "Unlock: $30 Pkg + 3 Directs";
+          } else {
+            reqText = "Unlock: $40 Pkg + 4 Directs";
+          }
           
           return (
             <button 
@@ -773,6 +784,7 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
                   </div>
                   <div className="space-y-1">
                     <p className="text-[7px] font-black text-slate-muted uppercase tracking-widest leading-none">{label} {lvl}</p>
+                    <p className="text-[8px] font-black text-electric/90 uppercase tracking-widest pt-1 leading-none">{reqText}</p>
                     <div className="flex flex-wrap gap-x-2 gap-y-0.5 max-w-[130px] pt-1">
                       {activeTab === 'matrix' ? (
                         <span className="text-[9px] font-black text-emerald-400 font-mono">$10 Nodes:{stats?.pkg10 || 0}</span>
