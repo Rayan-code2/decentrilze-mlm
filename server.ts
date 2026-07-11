@@ -674,13 +674,6 @@ app.get('/api/packages', async (req: any, res: any) => {
             await db.insert(mlmPackages).values({ name: 'Elite Node', price: 30.0, dailyRoi: 0.3, roiIntervalMinutes: 1440, maxRoiPercent: 1000.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1.5,1.5,1.5,3,3,3,6,6,15,15]', levelLockLimit: 8 });
             await db.insert(mlmPackages).values({ name: 'Whale Node', price: 40.0, dailyRoi: 0.4, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[2,2,2,4,4,4,8,8,20,20]', levelLockLimit: 10 });
             list = await db.select().from(mlmPackages).orderBy(asc(mlmPackages.price));
-        } else {
-            // Auto-update existing packages to the correct latest plan so the user does not have to edit them manually
-            await db.update(mlmPackages).set({ levelIncomePercents: '[0.5,0.5,0.5,1,1,1,2,2,5,5]', levelLockLimit: 3 }).where(eq(mlmPackages.price, 10.0));
-            await db.update(mlmPackages).set({ levelIncomePercents: '[1,1,1,2,2,2,4,4,10,10]', levelLockLimit: 6 }).where(eq(mlmPackages.price, 20.0));
-            await db.update(mlmPackages).set({ levelIncomePercents: '[1.5,1.5,1.5,3,3,3,6,6,15,15]', levelLockLimit: 8 }).where(eq(mlmPackages.price, 30.0));
-            await db.update(mlmPackages).set({ levelIncomePercents: '[2,2,2,4,4,4,8,8,20,20]', levelLockLimit: 10 }).where(eq(mlmPackages.price, 40.0));
-            list = await db.select().from(mlmPackages).orderBy(asc(mlmPackages.price));
         }
         const packagesParsed = list.map(normalizePackage);
         res.json({ success: true, packages: packagesParsed });
