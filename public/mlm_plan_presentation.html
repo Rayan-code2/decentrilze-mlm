@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cryptospiral - Official MLM Business Plan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&family=Space+Grotesk:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --obsidian: #050505;
+      --neon-cyan: #00f2ff;
+      --neon-orange: #ff6b00;
+      --neon-purple: #bc00ff;
+      --industrial-gray: #121212;
+      --electric: #ccff00;
+      --emerald: #10b981;
+      --slate-muted: #94a3b8;
+      --white: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--obsidian);
+      color: var(--white);
+      line-height: 1.6;
+      overflow-x: hidden;
+      padding-bottom: 80px;
+    }
+
+    /* Print settings */
+    @media print {
+      body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        padding-bottom: 0;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .page-break {
+        page-break-before: always;
+        break-before: page;
+      }
+      .card {
+        border: 1px solid #ddd !important;
+        background: #fff !important;
+        color: #000 !important;
+        box-shadow: none !important;
+      }
+      .badge {
+        border: 1px solid #000 !important;
+        color: #000 !important;
+        background: none !important;
+      }
+      h1, h2, h3, h4, th {
+        color: #000000 !important;
+      }
+      td, p, span {
+        color: #333333 !important;
+      }
+      .gradient-bg {
+        background: none !important;
+        border: 1px solid #ddd !important;
+      }
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 40px;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 900;
+      font-size: 24px;
+      letter-spacing: -1px;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, var(--white), var(--neon-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .btn-print {
+      background-color: var(--electric);
+      color: var(--obsidian);
+      font-weight: 900;
+      text-transform: uppercase;
+      padding: 12px 24px;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      letter-spacing: 1px;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 20px rgba(204, 255, 0, 0.3);
+    }
+
+    .btn-print:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 30px rgba(204, 255, 0, 0.5);
+    }
+
+    /* Hero section */
+    .hero-panel {
+      text-align: center;
+      padding: 80px 20px;
+      background: radial-gradient(circle at center, rgba(0, 242, 255, 0.1) 0%, transparent 70%);
+      border-radius: 30px;
+      border: 1px solid rgba(0, 242, 255, 0.1);
+      margin-bottom: 60px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-subtitle {
+      color: var(--neon-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      margin-bottom: 15px;
+    }
+
+    .hero-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 900;
+      font-size: 48px;
+      line-height: 1.1;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      letter-spacing: -2px;
+    }
+
+    .hero-desc {
+      font-size: 16px;
+      color: var(--slate-muted);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Section styling */
+    section {
+      margin-bottom: 60px;
+    }
+
+    .section-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 900;
+      font-size: 28px;
+      text-transform: uppercase;
+      letter-spacing: -1px;
+      margin-bottom: 30px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-left: 4px solid var(--neon-cyan);
+      padding-left: 15px;
+    }
+
+    /* Grid Layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 25px;
+    }
+
+    @media (max-width: 768px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+      .hero-title {
+        font-size: 36px;
+      }
+    }
+
+    /* Cards */
+    .card {
+      background-color: var(--industrial-gray);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 20px;
+      padding: 30px;
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(0, 242, 255, 0.2);
+    }
+
+    .card-accent-cyan { border-top: 4px solid var(--neon-cyan); }
+    .card-accent-orange { border-top: 4px solid var(--neon-orange); }
+    .card-accent-purple { border-top: 4px solid var(--neon-purple); }
+    .card-accent-electric { border-top: 4px solid var(--electric); }
+
+    .card-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 900;
+      font-size: 22px;
+      text-transform: uppercase;
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-price {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--electric);
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background-color: var(--industrial-gray);
+      border-radius: 15px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 15px 20px;
+      text-align: left;
+    }
+
+    th {
+      background-color: rgba(255, 255, 255, 0.03);
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: bold;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: var(--neon-cyan);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    td {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      font-size: 14px;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .text-right {
+      text-align: right;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      font-size: 10px;
+      font-weight: bold;
+      text-transform: uppercase;
+      border-radius: 4px;
+      background-color: rgba(255, 255, 255, 0.05);
+      color: var(--white);
+    }
+
+    .badge-cyan {
+      background-color: rgba(0, 242, 255, 0.1);
+      color: var(--neon-cyan);
+    }
+
+    .badge-electric {
+      background-color: rgba(204, 255, 0, 0.1);
+      color: var(--electric);
+    }
+
+    /* Highlight list */
+    .list-items {
+      list-style: none;
+      margin-top: 15px;
+    }
+
+    .list-items li {
+      position: relative;
+      padding-left: 25px;
+      margin-bottom: 10px;
+      font-size: 14px;
+      color: var(--slate-muted);
+    }
+
+    .list-items li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: var(--neon-cyan);
+      font-weight: bold;
+    }
+
+    .highlight-box {
+      background: linear-gradient(135deg, rgba(204, 255, 0, 0.05) 0%, rgba(0, 242, 255, 0.05) 100%);
+      border: 1px solid rgba(204, 255, 0, 0.1);
+      padding: 25px;
+      border-radius: 20px;
+      margin-top: 30px;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 80px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      color: var(--slate-muted);
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="logo-container">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="#121212"/>
+          <path d="M16 4L28 11V25L16 32L4 25V11L16 4Z" stroke="#00f2ff" stroke-width="2"/>
+          <path d="M16 9L23 13V21L16 25L9 21V13L16 9Z" stroke="#ccff00" stroke-width="1.5"/>
+          <circle cx="16" cy="17" r="3" fill="#ff6b00"/>
+        </svg>
+        <span class="logo-text">Cryptospiral</span>
+      </div>
+      <button class="btn-print no-print" onclick="window.print()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 6 2 18 2 18 9"></polyline>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+          <rect x="6" y="14" width="12" height="8"></rect>
+        </svg>
+        Save as PDF / Print
+      </button>
+    </header>
+
+    <!-- Cover Page -->
+    <div class="hero-panel">
+      <div class="hero-subtitle">Decentralized Income Protocol</div>
+      <h1 class="hero-title">Cryptospiral<br>Official Business Plan</h1>
+      <p class="hero-desc">An advanced, multi-tiered algorithmic referral and passive staking ecosystem designed on a 2x2 matrix and automated global spillover mechanism.</p>
+    </div>
+
+    <!-- Section 1: Packages -->
+    <section class="page-break">
+      <h2 class="section-title">1. Packages & Node Protocols</h2>
+      <p style="color: var(--slate-muted); margin-bottom: 25px;">Cryptospiral has four distinct node subscription tiers. Each package increases your personal staking limit, direct referral yields, and unlocks higher depth in matrix generational incomes.</p>
+      
+      <div class="grid-2">
+        <!-- Starter Node -->
+        <div class="card card-accent-cyan">
+          <div class="card-title">
+            <span>Starter Node</span>
+            <span class="card-price">$10</span>
+          </div>
+          <p style="color: var(--slate-muted); font-size: 13px; margin-bottom: 15px;">Ideal entry level package. Auto-unlocks immediate matrix earnings.</p>
+          <ul class="list-items">
+            <li>Daily ROI: <strong>1.0%</strong> (Staking Yield)</li>
+            <li>Direct Bonus: <strong>20%</strong> to <strong>40%</strong></li>
+            <li>Matrix Spillover Bonus: <strong>10%</strong></li>
+            <li>Max ROI Cap: <strong>250%</strong> (Or Global override)</li>
+            <li>Level Income Unlocked: <strong>L1 to L3</strong></li>
+            <li>Qualification: <strong>0 Directs required</strong></li>
+          </ul>
+        </div>
+
+        <!-- Pro Node -->
+        <div class="card card-accent-orange">
+          <div class="card-title">
+            <span>Pro Node</span>
+            <span class="card-price">$20</span>
+          </div>
+          <p style="color: var(--slate-muted); font-size: 13px; margin-bottom: 15px;">Advanced network tier designed for intermediate builders.</p>
+          <ul class="list-items">
+            <li>Daily ROI: <strong>1.0%</strong> (Staking Yield)</li>
+            <li>Direct Bonus: <strong>20%</strong> to <strong>40%</strong></li>
+            <li>Matrix Spillover Bonus: <strong>10%</strong></li>
+            <li>Max ROI Cap: <strong>Unlimited / Configurable</strong></li>
+            <li>Level Income Unlocked: <strong>L1 to L6</strong></li>
+            <li>Qualification: <strong>2 Direct referrals required</strong></li>
+          </ul>
+        </div>
+
+        <!-- Elite Node -->
+        <div class="card card-accent-purple">
+          <div class="card-title">
+            <span>Elite Node</span>
+            <span class="card-price">$30</span>
+          </div>
+          <p style="color: var(--slate-muted); font-size: 13px; margin-bottom: 15px;">High volume node with deep downline commission capabilities.</p>
+          <ul class="list-items">
+            <li>Daily ROI: <strong>1.0%</strong> (Staking Yield)</li>
+            <li>Direct Bonus: <strong>20%</strong> to <strong>40%</strong></li>
+            <li>Matrix Spillover Bonus: <strong>10%</strong></li>
+            <li>Max ROI Cap: <strong>1000%</strong></li>
+            <li>Level Income Unlocked: <strong>L1 to L8</strong></li>
+            <li>Qualification: <strong>3 Direct referrals required</strong></li>
+          </ul>
+        </div>
+
+        <!-- Whale Node -->
+        <div class="card card-accent-electric">
+          <div class="card-title">
+            <span>Whale Node</span>
+            <span class="card-price">$40</span>
+          </div>
+          <p style="color: var(--slate-muted); font-size: 13px; margin-bottom: 15px;">Ultimate package. Full access to the entire 10-level matrix model.</p>
+          <ul class="list-items">
+            <li>Daily ROI: <strong>1.0%</strong> (Staking Yield)</li>
+            <li>Direct Bonus: <strong>20%</strong> to <strong>40%</strong></li>
+            <li>Matrix Spillover Bonus: <strong>10%</strong></li>
+            <li>Max ROI Cap: <strong>Unlimited</strong></li>
+            <li>Level Income Unlocked: <strong>L1 to L10</strong></li>
+            <li>Qualification: <strong>4 Direct referrals required</strong></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Levels Protocol -->
+    <section class="page-break">
+      <h2 class="section-title">2. Generation Level Income Structure (Sponsor Tree)</h2>
+      <p style="color: var(--slate-muted); margin-bottom: 15px;">This income is distributed through your direct recruitment team (Sponsor Tree). Payouts are generated whenever a team member at a specific generation buys or upgrades a package. This income is conditional upon your own active package and direct recruitment milestones:</p>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Generation Level</th>
+            <th>Payout in $10 Node</th>
+            <th>Payout in $20 Node</th>
+            <th>Payout in $30 Node</th>
+            <th>Payout in $40 Node</th>
+            <th>Unlock Condition (Own Pkg + Directs)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>L1 - L3</strong></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$0.50</span></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$1.00</span></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$1.50</span></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$2.00</span></td>
+            <td><span class="badge badge-cyan">Starter Node ($10) / 0 Directs</span></td>
+          </tr>
+          <tr>
+            <td><strong>L4 - L6</strong></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$1.00</span></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$2.00</span></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$3.00</span></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$4.00</span></td>
+            <td><span class="badge badge-cyan">Pro Node ($20) / 2 Directs</span></td>
+          </tr>
+          <tr>
+            <td><strong>L7 - L8</strong></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$2.00</span></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$4.00</span></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$6.00</span></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$8.00</span></td>
+            <td><span class="badge badge-cyan">Elite Node ($30) / 3 Directs</span></td>
+          </tr>
+          <tr>
+            <td><strong>L9</strong></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$3.00</span></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$6.00</span></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$9.00</span></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$12.00</span></td>
+            <td><span class="badge badge-cyan">Whale Node ($40) / 4 Directs</span></td>
+          </tr>
+          <tr>
+            <td><strong>L10</strong></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$5.00</span></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$10.00</span></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$15.00</span></td>
+            <td><span style="color: var(--emerald); font-weight: bold;">$20.00</span></td>
+            <td><span class="badge badge-cyan">Whale Node ($40) / 4 Directs</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Section 3: Unconditional 2x2 Matrix Income -->
+    <section class="page-break">
+      <h2 class="section-title">3. Unconditional 2x2 Matrix Placement Income</h2>
+      <p style="color: var(--slate-muted); margin-bottom: 15px;">This is a fully decentralized 2x2 auto-spillover matrix. It is <strong>completely unconditional</strong>—there are <strong>no package upgrades or direct sponsor requirements</strong> to earn matrix placement or level incomes. Income is generated automatically when any node lands in your matrix structure (from direct recruits or global system spillovers):</p>
+
+      <div class="grid-2" style="margin-bottom: 30px;">
+        <div class="card card-accent-cyan">
+          <div class="card-title">Placement Bonus (10%)</div>
+          <p style="color: var(--slate-muted); font-size: 13px;">The immediate direct matrix parent where the node is placed receives a flat 10% of the node's package price:</p>
+          <ul class="list-items">
+            <li>$10 Node placement: <strong>$1.00</strong></li>
+            <li>$20 Node placement: <strong>$2.00</strong></li>
+            <li>$30 Node placement: <strong>$3.00</strong></li>
+            <li>$40 Node placement: <strong>$4.00</strong></li>
+          </ul>
+        </div>
+        
+        <div class="card card-accent-electric">
+          <div class="card-title">Matrix Level Bonus (10% of Placement)</div>
+          <p style="color: var(--slate-muted); font-size: 13px;">Additionally, 10 levels of active uplines above the placed user in the matrix tree each receive exactly 10% of the placement bonus (1% of total pkg price) equally, with no conditions:</p>
+          <ul class="list-items">
+            <li>For $10 Node: <strong>$0.10</strong> to all 10 upline levels</li>
+            <li>For $20 Node: <strong>$0.20</strong> to all 10 upline levels</li>
+            <li>For $30 Node: <strong>$0.30</strong> to all 10 upline levels</li>
+            <li>For $40 Node: <strong>$0.40</strong> to all 10 upline levels</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Global Boosting Queue Pool -->
+    <section class="page-break">
+      <h2 class="section-title">4. Global Gold Boosting Queue Pool</h2>
+      <p style="color: var(--slate-muted); margin-bottom: 25px;">The ultimate auto-compounding system. A fast-tracked global pool designed to reward active community builders through automatic spillover and infinite rebirth cycles.</p>
+
+      <div class="card" style="border-left: 4px solid var(--electric);">
+        <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 18px; margin-bottom: 15px; text-transform: uppercase;">How the Boosting Queue Works:</h3>
+        <ul class="list-items">
+          <li><strong>Entrance Criteria:</strong> You must own at least a <strong>$10 Active Node Package</strong> and have sponsored at least <strong>2 Direct Referrals</strong>.</li>
+          <li><strong>Automated Queuing:</strong> System registers qualified users sequentially in a single-line global list.</li>
+          <li><strong>Cycle Completion:</strong> Whenever <strong>12 new users</strong> enter the global queue behind you, a cycle finishes.</li>
+          <li><strong>The Payout:</strong> You are awarded a direct payout of <strong>$20.00</strong>.</li>
+          <li><strong>Infinite Rebirth:</strong> Upon payout, the system automatically inserts a brand new "Rebirth" slot for you at the bottom of the queue, allowing you to cycle again and again forever without paying any extra registration fees!</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Section 5: Rank Milestone Rewards -->
+    <section>
+      <h2 class="section-title">5. Rank Milestone Protocol</h2>
+      <p style="color: var(--slate-muted); margin-bottom: 25px;">Sponsors who scale team business volumes are rewarded with corporate ranks, milestone payouts, and system prestige.</p>
+
+      <div class="grid-2">
+        <div class="card" style="background-color: rgba(0, 242, 255, 0.02); border-color: rgba(0, 242, 255, 0.05);">
+          <h4 style="font-family: 'Space Grotesk', sans-serif; font-size: 16px; margin-bottom: 10px; text-transform: uppercase; color: var(--neon-cyan);">Personal Business Volume</h4>
+          <p style="font-size: 13px; color: var(--slate-muted);">The aggregate price value of all packages purchased by yourself directly.</p>
+        </div>
+        <div class="card" style="background-color: rgba(204, 255, 0, 0.02); border-color: rgba(204, 255, 0, 0.05);">
+          <h4 style="font-family: 'Space Grotesk', sans-serif; font-size: 16px; margin-bottom: 10px; text-transform: uppercase; color: var(--electric);">Team Business Volume</h4>
+          <p style="font-size: 13px; color: var(--slate-muted);">The total aggregate package value purchased by all downstream refers in your team up to depth limits.</p>
+        </div>
+      </div>
+
+      <div class="highlight-box">
+        <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 18px; margin-bottom: 10px; text-transform: uppercase; color: var(--electric);">Additional Staking Perks: Lucky Spin Wheel</h3>
+        <p style="font-size: 14px; color: var(--slate-muted);">Earn free entries to the Lucky Spin Wheel upon hitting recruitment milestones or package updates, offering instant cash prize payouts direct to your active wallet balance.</p>
+      </div>
+    </section>
+
+    <div class="footer">
+      CRYPTOSPIRAL &copy; 2026. ALL RIGHTS RESERVED. RUNNING ON DECENTRALIZED PROTOCOL NODE.
+    </div>
+  </div>
+
+</body>
+</html>

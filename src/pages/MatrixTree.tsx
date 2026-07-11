@@ -750,22 +750,32 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
           const stats = activeTab === 'matrix' ? matrixLevelStats[lvl] : generationLevelStats[lvl];
           const label = activeTab === 'matrix' ? 'Matrix Level' : 'Generation';
           const prefix = activeTab === 'matrix' ? 'L' : 'G';
-          const packageIncomes: { [key: number]: number[] } = {
+          
+          const packageIncomes: { [key: number]: number[] } = activeTab === 'matrix' ? {
+            10: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            20: [2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+            30: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+            40: [4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
+          } : {
             10: [0.5, 0.5, 0.5, 1, 1, 1, 2, 2, 3, 5],
-            20: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            30: [1, 1, 1, 2, 2, 2, 2, 2, 2, 7],
-            40: [1, 1, 2, 2, 3, 3, 3, 4, 4, 15]
+            20: [1, 1, 1, 2, 2, 2, 4, 4, 6, 10],
+            30: [1.5, 1.5, 1.5, 3, 3, 3, 6, 6, 9, 15],
+            40: [2, 2, 2, 4, 4, 4, 8, 8, 12, 20]
           };
 
           let reqText = "";
-          if (lvl <= 3) {
-            reqText = "Unlock: $10 Pkg + 0 Direct";
-          } else if (lvl <= 6) {
-            reqText = "Unlock: $20 Pkg + 2 Directs";
-          } else if (lvl <= 8) {
-            reqText = "Unlock: $30 Pkg + 3 Directs";
+          if (activeTab === 'matrix') {
+            reqText = "Unconditional (Always Unlocked)";
           } else {
-            reqText = "Unlock: $40 Pkg + 4 Directs";
+            if (lvl <= 3) {
+              reqText = "Unlock: $10 Pkg + 0 Direct";
+            } else if (lvl <= 6) {
+              reqText = "Unlock: $20 Pkg + 2 Directs";
+            } else if (lvl <= 8) {
+              reqText = "Unlock: $30 Pkg + 3 Directs";
+            } else {
+              reqText = "Unlock: $40 Pkg + 4 Directs";
+            }
           }
           
           return (
@@ -786,16 +796,10 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
                     <p className="text-[7px] font-black text-slate-muted uppercase tracking-widest leading-none">{label} {lvl}</p>
                     <p className="text-[8px] font-black text-electric/90 uppercase tracking-widest pt-1 leading-none">{reqText}</p>
                     <div className="flex flex-wrap gap-x-2 gap-y-0.5 max-w-[130px] pt-1">
-                      {activeTab === 'matrix' ? (
-                        <span className="text-[9px] font-black text-emerald-400 font-mono">$10 Nodes:{stats?.pkg10 || 0}</span>
-                      ) : (
-                        <>
-                          <span className="text-[9px] font-black text-emerald-400 font-mono">$10:{stats?.pkg10 || 0}</span>
-                          <span className="text-[9px] font-black text-cyan-400 font-mono">$20:{stats?.pkg20 || 0}</span>
-                          <span className="text-[9px] font-black text-amber-400 font-mono">$30:{stats?.pkg30 || 0}</span>
-                          <span className="text-[9px] font-black text-rose-400 font-mono">$40:{stats?.pkg40 || 0}</span>
-                        </>
-                      )}
+                      <span className="text-[9px] font-black text-emerald-400 font-mono">$10:{stats?.pkg10 || 0}</span>
+                      <span className="text-[9px] font-black text-cyan-400 font-mono">$20:{stats?.pkg20 || 0}</span>
+                      <span className="text-[9px] font-black text-amber-400 font-mono">$30:{stats?.pkg30 || 0}</span>
+                      <span className="text-[9px] font-black text-rose-400 font-mono">$40:{stats?.pkg40 || 0}</span>
                     </div>
                   </div>
                 </div>
@@ -805,33 +809,24 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
                 </div>
               </div>
               
-              {activeTab === 'matrix' ? (
-                <div className="pt-2 border-t border-white/5 flex justify-between items-center relative z-10 text-[8px] leading-tight">
-                  <div className="flex justify-between items-center bg-emerald-500/5 px-3 py-1.5 rounded w-full">
-                    <span className="text-slate-400 font-bold block">In ($10) Package</span>
-                    <span className="font-mono font-black text-emerald-400 text-xs">${packageIncomes[10][lvl - 1].toFixed(2)}</span>
-                  </div>
+              <div className="pt-2 border-t border-white/5 grid grid-cols-2 gap-x-2 gap-y-1 relative z-10 text-[8px] leading-tight">
+                <div className="flex justify-between items-center bg-emerald-500/5 px-1.5 py-0.5 rounded">
+                  <span className="text-slate-400 font-bold block">In ($10)</span>
+                  <span className="font-mono font-black text-emerald-400">${packageIncomes[10][lvl - 1].toFixed(2)}</span>
                 </div>
-              ) : (
-                <div className="pt-2 border-t border-white/5 grid grid-cols-2 gap-x-2 gap-y-1 relative z-10 text-[8px] leading-tight">
-                  <div className="flex justify-between items-center bg-emerald-500/5 px-1.5 py-0.5 rounded">
-                    <span className="text-slate-400 font-bold block">In ($10)</span>
-                    <span className="font-mono font-black text-emerald-400">${packageIncomes[10][lvl - 1].toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-cyan-500/5 px-1.5 py-0.5 rounded">
-                    <span className="text-slate-400 font-bold block">In ($20)</span>
-                    <span className="font-mono font-black text-cyan-400">${packageIncomes[20][lvl - 1].toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-amber-500/5 px-1.5 py-0.5 rounded">
-                    <span className="text-slate-400 font-bold block">In ($30)</span>
-                    <span className="font-mono font-black text-amber-400">${packageIncomes[30][lvl - 1].toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-rose-500/5 px-1.5 py-0.5 rounded">
-                    <span className="text-slate-400 font-bold block">In ($40)</span>
-                    <span className="font-mono font-black text-rose-400">${packageIncomes[40][lvl - 1].toFixed(2)}</span>
-                  </div>
+                <div className="flex justify-between items-center bg-cyan-500/5 px-1.5 py-0.5 rounded">
+                  <span className="text-slate-400 font-bold block">In ($20)</span>
+                  <span className="font-mono font-black text-cyan-400">${packageIncomes[20][lvl - 1].toFixed(2)}</span>
                 </div>
-              )}
+                <div className="flex justify-between items-center bg-amber-500/5 px-1.5 py-0.5 rounded">
+                  <span className="text-slate-400 font-bold block">In ($30)</span>
+                  <span className="font-mono font-black text-amber-400">${packageIncomes[30][lvl - 1].toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center bg-rose-500/5 px-1.5 py-0.5 rounded">
+                  <span className="text-slate-400 font-bold block">In ($40)</span>
+                  <span className="font-mono font-black text-rose-400">${packageIncomes[40][lvl - 1].toFixed(2)}</span>
+                </div>
+              </div>
             </button>
           );
         })}

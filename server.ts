@@ -669,11 +669,21 @@ app.get('/api/packages', async (req: any, res: any) => {
     try {
         let list = await db.select().from(mlmPackages).orderBy(asc(mlmPackages.price));
         if (list.length === 0) {
-            await db.insert(mlmPackages).values({ name: 'Starter Node', price: 10.0, dailyRoi: 0.1, roiIntervalMinutes: 1440, maxRoiPercent: 250.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[0.5,0.5,0.5,1,1,1,2,2,5,5]', levelLockLimit: 3 });
-            await db.insert(mlmPackages).values({ name: 'Pro Node', price: 20.0, dailyRoi: 0.2, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,2,2,2,4,4,10,10]', levelLockLimit: 6 });
-            await db.insert(mlmPackages).values({ name: 'Elite Node', price: 30.0, dailyRoi: 0.3, roiIntervalMinutes: 1440, maxRoiPercent: 1000.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1.5,1.5,1.5,3,3,3,6,6,15,15]', levelLockLimit: 8 });
-            await db.insert(mlmPackages).values({ name: 'Whale Node', price: 40.0, dailyRoi: 0.4, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[2,2,2,4,4,4,8,8,20,20]', levelLockLimit: 10 });
+            await db.insert(mlmPackages).values({ name: 'Starter Node', price: 10.0, dailyRoi: 0.1, roiIntervalMinutes: 1440, maxRoiPercent: 250.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[0.5,0.5,0.5,1,1,1,2,2,3,5]', levelLockLimit: 3 });
+            await db.insert(mlmPackages).values({ name: 'Pro Node', price: 20.0, dailyRoi: 0.2, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1,1,1,2,2,2,4,4,6,10]', levelLockLimit: 6 });
+            await db.insert(mlmPackages).values({ name: 'Elite Node', price: 30.0, dailyRoi: 0.3, roiIntervalMinutes: 1440, maxRoiPercent: 1000.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[1.5,1.5,1.5,3,3,3,6,6,9,15]', levelLockLimit: 8 });
+            await db.insert(mlmPackages).values({ name: 'Whale Node', price: 40.0, dailyRoi: 0.4, roiIntervalMinutes: 1440, maxRoiPercent: 0.0, durationDays: 365, isActive: true, directIncomePercent: 20.0, matrixIncomePercent: 10.0, levelIncomePercents: '[2,2,2,4,4,4,8,8,12,20]', levelLockLimit: 10 });
             list = await db.select().from(mlmPackages).orderBy(asc(mlmPackages.price));
+        } else {
+            // Safe auto-correction if existing packages still have the old hardcoded level 9 (5 instead of 3 etc)
+            const starter = list.find(p => Number(p.price) === 10.0);
+            if (starter && starter.levelIncomePercents === '[0.5,0.5,0.5,1,1,1,2,2,5,5]') {
+                await db.update(mlmPackages).set({ levelIncomePercents: '[0.5,0.5,0.5,1,1,1,2,2,3,5]' }).where(eq(mlmPackages.price, 10.0));
+                await db.update(mlmPackages).set({ levelIncomePercents: '[1,1,1,2,2,2,4,4,6,10]' }).where(eq(mlmPackages.price, 20.0));
+                await db.update(mlmPackages).set({ levelIncomePercents: '[1.5,1.5,1.5,3,3,3,6,6,9,15]' }).where(eq(mlmPackages.price, 30.0));
+                await db.update(mlmPackages).set({ levelIncomePercents: '[2,2,2,4,4,4,8,8,12,20]' }).where(eq(mlmPackages.price, 40.0));
+                list = await db.select().from(mlmPackages).orderBy(asc(mlmPackages.price));
+            }
         }
         const packagesParsed = list.map(normalizePackage);
         res.json({ success: true, packages: packagesParsed });
@@ -946,7 +956,7 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
             if (matrixPayout > 0) {
                 await distributeIncomeServer(matrixParentUid, matrixPayout, 'matrix_income', `Placement bonus: Node $${price} from ${profile.name}`, userId);
 
-                // Distribute 10% of matrixPayout to matrixParentUid's upline (up to 10 levels) in the matrix tree
+                // Distribute equal matrixPayout (10% of package price) to matrixParentUid's upline (up to 10 levels) in the matrix tree
                 let matrixUplineId = '1';
                 const recipientUser = await fetchUserById(matrixParentUid);
                 if (recipientUser) {
