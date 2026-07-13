@@ -36,6 +36,7 @@ export const wallets = pgTable('wallets', {
   levelIncome: doublePrecision('level_income').notNull().default(0.0),
   matrixIncome: doublePrecision('matrix_income').notNull().default(0.0),
   holdBalance: doublePrecision('hold_balance').notNull().default(0.0),
+  upgradeBalance: doublePrecision('upgrade_balance').notNull().default(0.0),
   totalRoiRate: doublePrecision('total_roi_rate').default(0.0),
   packageRoiRate: doublePrecision('package_roi_rate').default(0.0),
   baseRoiRate: doublePrecision('base_roi_rate').default(0.0),

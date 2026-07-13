@@ -211,10 +211,18 @@ const App: React.FC = () => {
   const handleOptimisticPurchase = useCallback((price: number) => {
     // Update local wallet balance immediately
     setPendingDeduction(prev => prev + price);
-    setWallet(prev => ({
-      ...prev,
-      balance: (prev.balance || 0) - price
-    }));
+    setWallet(prev => {
+      const upgradeBal = Number(prev.upgradeBalance !== undefined ? prev.upgradeBalance : (prev.upgrade_balance !== undefined ? prev.upgrade_balance : 0));
+      const balance = Number(prev.balance || 0);
+      const deductFromUpgrade = Math.min(price, upgradeBal);
+      const deductFromNormal = price - deductFromUpgrade;
+      return {
+        ...prev,
+        upgradeBalance: upgradeBal - deductFromUpgrade,
+        upgrade_balance: upgradeBal - deductFromUpgrade,
+        balance: balance - deductFromNormal
+      };
+    });
   }, []);
 
   const clearPendingDeduction = useCallback((price: number) => {

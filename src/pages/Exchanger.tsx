@@ -397,18 +397,37 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
           </div>
         </div>
 
-        <div className="relative p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-dashed border-red-500/20 bg-red-500/[0.03] cyber-grid">
+        <div className="relative p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-dashed border-red-500/20 bg-red-500/[0.03] cyber-grid space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center sm:text-left border-b border-red-500/10 pb-4">
+            <div>
+              <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">Requested</span>
+              <p className="text-lg font-black text-white italic">${Number(amount || 0).toFixed(2)}</p>
+            </div>
+            <div>
+              <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest block mb-1">20% Upgrade Fund</span>
+              <p className="text-lg font-black text-amber-500 italic">+${(Number(amount || 0) * 0.2).toFixed(2)}</p>
+            </div>
+            <div>
+              <span className="text-[8px] font-black text-red-500/60 uppercase tracking-widest block mb-1">Fee ({withdrawalFee}%)</span>
+              <p className="text-lg font-black text-red-500/60 italic">-${(Number(amount || 0) * (withdrawalFee / 100)).toFixed(2)}</p>
+            </div>
+            <div>
+              <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest block mb-1">Net Dispatched (80%)</span>
+              <p className="text-lg font-black text-emerald-400 italic">${(Number(amount || 0) * 0.8).toFixed(2)}</p>
+            </div>
+          </div>
+          
           <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
             <div className="space-y-2 text-center sm:text-left">
-              <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em]">Estimated Settlement Payout</span>
+              <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em]">Estimated Net Received (Minus Fee)</span>
               <div className="flex items-baseline justify-center sm:justify-start gap-2 sm:gap-3">
-                <span className="text-3xl sm:text-5xl font-black text-white italic tracking-tighter leading-none">${(Number(amount) * (1 - withdrawalFee / 100)).toFixed(2)}</span>
-                <span className="text-xs sm:text-sm font-black text-red-500/60 uppercase">Net</span>
+                <span className="text-3xl sm:text-5xl font-black text-emerald-400 italic tracking-tighter leading-none">${Math.max(0, (Number(amount || 0) * (0.8 - withdrawalFee / 100))).toFixed(2)}</span>
+                <span className="text-xs sm:text-sm font-black text-emerald-500/60 uppercase">Net</span>
               </div>
             </div>
             <div className="text-center sm:text-right bg-black/40 px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-white/5 w-full sm:w-auto">
-              <span className="text-[7px] sm:text-[8px] font-black text-red-500/50 uppercase tracking-widest block mb-0.5 sm:mb-1">Protocol Tax</span>
-              <p className="text-lg sm:text-xl font-black text-red-500 italic leading-none">-${(Number(amount) * (withdrawalFee / 100)).toFixed(2)}</p>
+              <span className="text-[7px] sm:text-[8px] font-black text-amber-500 uppercase tracking-widest block mb-0.5 sm:mb-1">Credited to Upgrade Wallet</span>
+              <p className="text-lg sm:text-xl font-black text-amber-500 italic leading-none">+${(Number(amount || 0) * 0.2).toFixed(2)}</p>
             </div>
           </div>
         </div>
@@ -443,12 +462,22 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
         {/* VAULT STATUS CARD */}
         <div className="relative group w-full lg:w-auto">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-electric/20 to-cyan-500/20 blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
-          <div className="relative glass-card px-4 sm:px-6 py-3 sm:py-4 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between sm:justify-start gap-4 sm:gap-8 min-w-full sm:min-w-[280px]">
+          <div className="relative glass-card px-4 sm:px-6 py-3 sm:py-4 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between sm:justify-start gap-4 sm:gap-6 min-w-full sm:min-w-[340px]">
             <div className="space-y-0.5 sm:space-y-1">
               <p className="text-[7px] sm:text-[8px] font-black text-slate-500 uppercase tracking-widest">Vault Available</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-black text-white italic tracking-tighter">${Number(wallet?.balance || 0).toFixed(2)}</span>
-                <span className="text-[10px] font-black text-electric/60 uppercase">USDT</span>
+                <span className="text-xl sm:text-2xl font-black text-white italic tracking-tighter">${Number(wallet?.balance || 0).toFixed(2)}</span>
+                <span className="text-[9px] font-black text-electric/60 uppercase">USDT</span>
+              </div>
+            </div>
+            <div className="h-8 sm:h-10 w-[1px] bg-white/10"></div>
+            <div className="space-y-0.5 sm:space-y-1">
+              <p className="text-[7px] sm:text-[8px] font-black text-amber-500 uppercase tracking-widest">Upgrade Wallet</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl sm:text-2xl font-black text-amber-400 italic tracking-tighter">
+                  ${wallet.upgradeBalance !== undefined ? parseFloat(Number(wallet.upgradeBalance).toFixed(4)) : (wallet.upgrade_balance !== undefined ? parseFloat(Number(wallet.upgrade_balance).toFixed(4)) : '0.00')}
+                </span>
+                <span className="text-[9px] font-black text-amber-500/60 uppercase">USDT</span>
               </div>
             </div>
             <div className="h-8 sm:h-10 w-[1px] bg-white/10 hidden xs:block"></div>

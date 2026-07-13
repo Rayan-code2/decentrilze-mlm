@@ -640,6 +640,7 @@ function normalizeWallet(w: any) {
         level_income: w.levelIncome !== undefined ? w.levelIncome : w.level_income,
         matrix_income: w.matrixIncome !== undefined ? w.matrixIncome : w.matrix_income,
         hold_balance: w.holdBalance !== undefined ? w.holdBalance : w.hold_balance,
+        upgrade_balance: w.upgradeBalance !== undefined ? w.upgradeBalance : w.upgrade_balance,
         total_roi_rate: w.totalRoiRate !== undefined ? w.totalRoiRate : w.total_roi_rate,
         package_roi_rate: w.packageRoiRate !== undefined ? w.package_roi_rate : w.package_roi_rate,
         base_roi_rate: w.baseRoiRate !== undefined ? w.baseRoiRate : w.base_roi_rate,
@@ -656,6 +657,7 @@ function normalizeWallet(w: any) {
         levelIncome: w.levelIncome !== undefined ? w.levelIncome : w.level_income,
         matrixIncome: w.matrixIncome !== undefined ? w.matrixIncome : w.matrix_income,
         holdBalance: w.holdBalance !== undefined ? w.holdBalance : w.hold_balance,
+        upgradeBalance: w.upgradeBalance !== undefined ? w.upgradeBalance : w.upgrade_balance,
         totalRoiRate: w.totalRoiRate !== undefined ? w.totalRoiRate : w.total_roi_rate,
         packageRoiRate: w.packageRoiRate !== undefined ? w.package_roi_rate : w.package_roi_rate,
         baseRoiRate: w.baseRoiRate !== undefined ? w.baseRoiRate : w.base_roi_rate,
@@ -873,24 +875,50 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
         const pkg = { ...pkgRaw, level_income_percents: levelPercents };
 
         const price = Number(pkg.price);
-        if (Number(wallet.balance) < price) {
-            return res.json({ success: false, message: `Insufficient balance ($${wallet.balance})` });
+        const normalBal = Number(wallet.balance || 0.0);
+        const upgradeBal = Number(wallet.upgradeBalance || 0.0);
+        const totalAvailable = normalBal + upgradeBal;
+
+        if (totalAvailable < price) {
+            return res.json({ 
+                success: false, 
+                message: `Insufficient balance. Required: $${price}. Available: Standard Wallet $${normalBal.toFixed(2)}, Upgrade Wallet $${upgradeBal.toFixed(2)}.` 
+            });
         }
 
         const existingPurchases = await db.select().from(purchases).where(eq(purchases.userId, userId));
-        const isActiveAlready = existingPurchases.some(p => p.packageId === pkg.id && p.isActive);
-        if (isActiveAlready) return res.json({ success: false, message: 'Node already active.' });
+        const activePurchaseIds = existingPurchases.filter(p => p.isActive).map(p => p.packageId);
 
         const sortedCatalogue = await db.select().from(mlmPackages).orderBy(asc(mlmPackages.price));
+        
+        // 1. If all packages are active, no further purchases can be made
+        const hasUnlockedAll = sortedCatalogue.every(p => activePurchaseIds.includes(p.id));
+        if (hasUnlockedAll) {
+            return res.json({ success: false, message: 'You have already activated all packages. No further purchases are allowed.' });
+        }
+
+        // 2. Prevent stacking / multiple purchases of the same node
+        const isActiveAlready = existingPurchases.some(p => p.packageId === pkg.id && p.isActive);
+        if (isActiveAlready) return res.json({ success: false, message: 'Node already active. Stacking is not allowed.' });
+
+        // 3. Prevent sequence bypass
         const index = sortedCatalogue.findIndex(p => p.id === pkg.id);
         if (index > 0) {
             const prevPkg = sortedCatalogue[index - 1];
-            const hasPrev = existingPurchases.some(p => p.packageId === prevPkg.id);
+            const hasPrev = existingPurchases.some(p => p.packageId === prevPkg.id && p.isActive);
             if (!hasPrev) return res.json({ success: false, message: `Sequence Error: Please activate the $${prevPkg.price} Node first.` });
         }
 
-        const initialBalance = Number(wallet.balance);
-        await db.update(wallets).set({ balance: sql`${wallets.balance} - ${price}` }).where(eq(wallets.userId, userId));
+        const deductFromUpgrade = Math.min(price, upgradeBal);
+        const deductFromNormal = price - deductFromUpgrade;
+
+        const initialBalance = normalBal;
+        const initialUpgradeBalance = upgradeBal;
+
+        await db.update(wallets).set({ 
+            balance: sql`${wallets.balance} - ${deductFromNormal}`,
+            upgradeBalance: sql`${wallets.upgradeBalance} - ${deductFromUpgrade}`
+        }).where(eq(wallets.userId, userId));
 
         let createdPurchase;
         try {
@@ -902,7 +930,10 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
             }).returning();
             createdPurchase = result[0];
         } catch (insertErr) {
-            await db.update(wallets).set({ balance: initialBalance }).where(eq(wallets.userId, userId));
+            await db.update(wallets).set({ 
+                balance: initialBalance,
+                upgradeBalance: initialUpgradeBalance
+            }).where(eq(wallets.userId, userId));
             throw insertErr;
         }
 
@@ -1558,19 +1589,33 @@ app.post('/api/admin/handle-request', verifyAdmin, async (req: any, res: any) =>
                     fromUserId: 'SYSTEM' 
                 });
             } else {
-                // Withdrawal approval: Deduct hold balance and increment total withdrawn
+                // Withdrawal approval: Deduct hold balance, add 20% to upgradeBalance, and 80% to totalWithdrawn
+                const refundToUpgrade = Number((amt * 0.20).toFixed(4));
+                const netWithdrawn = Number((amt - refundToUpgrade).toFixed(4));
+
                 await db.update(wallets).set({ 
                     holdBalance: sql`${wallets.holdBalance} - ${amt}`,
-                    totalWithdrawn: sql`${wallets.totalWithdrawn} + ${amt}`
+                    upgradeBalance: sql`${wallets.upgradeBalance} + ${refundToUpgrade}`,
+                    totalWithdrawn: sql`${wallets.totalWithdrawn} + ${netWithdrawn}`
                 }).where(eq(wallets.userId, userId));
 
-                // Insert Transaction Log
+                // Insert Transaction Log for net withdrawal
                 await db.insert(transactions).values({ 
                     userId, 
-                    amount: amt, 
+                    amount: netWithdrawn, 
                     type: 'withdraw', 
                     status: 'completed', 
-                    description: `USDT Withdrawal Dispatched: $${amt}`, 
+                    description: `USDT Withdrawal Dispatched: $${netWithdrawn} (20% Upgrade Fund deducted)`, 
+                    fromUserId: 'SYSTEM' 
+                });
+
+                // Insert Transaction Log for upgrade fund credit
+                await db.insert(transactions).values({ 
+                    userId, 
+                    amount: refundToUpgrade, 
+                    type: 'upgrade_fund', 
+                    status: 'completed', 
+                    description: `20% Reinvestment from Withdrawal: $${refundToUpgrade}`, 
                     fromUserId: 'SYSTEM' 
                 });
             }
@@ -1905,6 +1950,7 @@ async function verifyAndHealPostgresSchema() {
         `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "level_income" double precision NOT NULL DEFAULT 0.0;`,
         `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "matrix_income" double precision NOT NULL DEFAULT 0.0;`,
         `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "hold_balance" double precision NOT NULL DEFAULT 0.0;`,
+        `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "upgrade_balance" double precision NOT NULL DEFAULT 0.0;`,
         `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "available_spins" integer NOT NULL DEFAULT 0;`,
         `ALTER TABLE "wallets" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();`,
         `ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "roi_interval_minutes" integer;`,

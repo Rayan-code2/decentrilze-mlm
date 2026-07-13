@@ -1063,21 +1063,47 @@ export const mockApi = {
       
       // Condition: Sequential purchase (10 -> 20 -> 50 -> 100)
       const sortedPkgs = [...packages].sort((a, b) => a.price - b.price);
-      const pkgIndex = sortedPkgs.findIndex(p => p.id === pkg.id);
       
+      // 1. If all packages are active, no further purchases can be made
+      const hasUnlockedAll = sortedPkgs.every(p => purchasedIds.includes(p.id));
+      if (hasUnlockedAll) {
+        return { success: false, message: 'You have already activated all available packages. No further purchases are allowed.' };
+      }
+
+      // 2. Prevent stacking / multiple purchases of the same node
+      if (purchasedIds.includes(pkg.id)) {
+        return { success: false, message: 'This node is already active. Stacking is not allowed.' };
+      }
+
+      // 3. Prevent sequence bypass
+      const pkgIndex = sortedPkgs.findIndex(p => p.id === pkg.id);
       if (pkgIndex > 0) {
         const prevPkg = sortedPkgs[pkgIndex - 1];
         if (!purchasedIds.includes(prevPkg.id)) {
-          return { success: false, message: `Please purchase the $${prevPkg.price} ${prevPkg.name} first!` };
+          return { success: false, message: `Sequence Error: Please purchase the $${prevPkg.price} Node first!` };
         }
       }
 
-      if (purchasedIds.includes(pkg.id)) {
-        return { success: false, message: 'You already have this active protocol.' };
+      // 2. Deduct Balance (Option 1: Dual-Wallet Deduction logic)
+      const upgradeBal = Number(wallet.upgradeBalance !== undefined ? wallet.upgradeBalance : (wallet.upgrade_balance !== undefined ? wallet.upgrade_balance : 0));
+      const normalBal = Number(wallet.balance || 0);
+      const totalAvailable = normalBal + upgradeBal;
+
+      if (totalAvailable < pkg.price) {
+        return { success: false, message: `Insufficient balance. Required: $${pkg.price}.` };
       }
 
-      // 2. Deduct Balance & Add Proportional Bonus Spins
-      wallet.balance -= pkg.price;
+      const deductFromUpgrade = Math.min(pkg.price, upgradeBal);
+      const deductFromNormal = pkg.price - deductFromUpgrade;
+
+      if (wallet.upgradeBalance !== undefined) {
+        wallet.upgradeBalance -= deductFromUpgrade;
+      }
+      if (wallet.upgrade_balance !== undefined) {
+        wallet.upgrade_balance -= deductFromUpgrade;
+      }
+      wallet.balance -= deductFromNormal;
+
       const pkgPriceVal = Number(pkg.price || 0);
       let bonusSpins = 0;
       if (Math.abs(pkgPriceVal - 10) < 0.1) {

@@ -201,21 +201,23 @@ const Dashboard: React.FC<DashboardProps> = ({
         setBoostingGold(gold);
         setTransactions(transactions);
         
-        // Map active packages from real purchases
-        const purchasedIds = userPurchases.map(p => p.package_id || (p as any).packageId || (p as any).packageid).filter(Boolean);
-        const active = sortedPkgs.filter(p => purchasedIds.includes(p.id)).map(p => {
-          const matchedPurchase = userPurchases.find(up => (up.package_id === p.id || (up as any).$id === p.id || up.id === p.id));
+        // Map active packages from real purchases (supporting multiple purchases of the same package)
+        const active = userPurchases.map((up, upIdx) => {
+          const pkgId = up.package_id || (up as any).packageId || (up as any).packageid;
+          const p = sortedPkgs.find(pkg => String(pkg.id) === String(pkgId));
+          if (!p) return null;
           return {
             ...p,
-            earned: matchedPurchase?.roi_earned || 0,
-            activeSince: matchedPurchase?.activated_at || (matchedPurchase as any).activatedAt,
-            activated_at: matchedPurchase?.activated_at || (matchedPurchase as any).activatedAt,
-            last_roi_at: matchedPurchase?.last_paid_at || (matchedPurchase as any).lastPaidAt || (matchedPurchase as any).last_paid_at,
-            lastRoiAt: matchedPurchase?.last_paid_at || (matchedPurchase as any).lastPaidAt,
-            roi_interval_minutes: p.roi_interval_minutes || p.roiIntervalMinutes || matchedPurchase?.roi_interval_minutes || (matchedPurchase as any).roiIntervalMinutes,
-            roiIntervalMinutes: p.roi_interval_minutes || p.roiIntervalMinutes || matchedPurchase?.roi_interval_minutes || (matchedPurchase as any).roiIntervalMinutes
+            purchaseId: up.id || (up as any).$id || `live_${pkgId}_${upIdx}`,
+            earned: up.roi_earned || 0,
+            activeSince: up.activated_at || (up as any).activatedAt,
+            activated_at: up.activated_at || (up as any).activatedAt,
+            last_roi_at: up.last_paid_at || (up as any).lastPaidAt || (up as any).last_paid_at,
+            lastRoiAt: up.last_paid_at || (up as any).lastPaidAt,
+            roi_interval_minutes: p.roi_interval_minutes || p.roiIntervalMinutes || up.roi_interval_minutes || (up as any).roiIntervalMinutes,
+            roiIntervalMinutes: p.roi_interval_minutes || p.roiIntervalMinutes || up.roi_interval_minutes || (up as any).roiIntervalMinutes
           };
-        });
+        }).filter(Boolean) as any[];
         
         localStorage.setItem('cached_active_packages', JSON.stringify(active));
         
@@ -250,11 +252,17 @@ const Dashboard: React.FC<DashboardProps> = ({
         setTransactions(localTxs);
         
         const rawPurchases: any[] = JSON.parse(localStorage.getItem(`purchased_packages_${user.id}`) || '[]');
-        const pIds = rawPurchases.map(p => typeof p === 'string' ? p : p.id);
-        const active = sortedPkgs.filter(p => pIds.includes(p.id)).map(p => ({
-          ...p,
-          earned: 3.00
-        }));
+        const active = rawPurchases.map((rp, index) => {
+          const pkgId = typeof rp === 'string' ? rp : rp.id;
+          const p = sortedPkgs.find(pkg => String(pkg.id) === String(pkgId));
+          if (!p) return null;
+          return {
+            ...p,
+            purchaseId: `mock_${pkgId}_${index}`,
+            earned: rp.earned !== undefined ? rp.earned : 3.00,
+            activated_at: rp.activated_at || Date.now()
+          };
+        }).filter(Boolean) as any[];
         
         setActivePackages(current => {
           // Preserve optimistic packages if they are not yet in the official list
@@ -483,10 +491,26 @@ const Dashboard: React.FC<DashboardProps> = ({
     
     const pkgToActivate = packages.find(p => p.id === pkgId);
     if (!pkgToActivate) return;
+
+    // Check if user already unlocked all packages
+    const hasUnlockedAll = packages.every(p => activePackages.some(ap => String(ap.id) === String(p.id)));
+    if (hasUnlockedAll) {
+      alert("You have already activated all available packages. No further purchases are allowed!");
+      return;
+    }
+
+    // Check if this specific package is already active (stacking is disabled)
+    const isActiveAlready = activePackages.some(ap => String(ap.id) === String(pkgId));
+    if (isActiveAlready) {
+      alert("This node is already active. Stacking is not allowed.");
+      return;
+    }
     
-    // Check balance locally first
-    if (wallet.balance < pkgToActivate.price) {
-      alert("Insufficient balance for this node.");
+    // Check balance locally first (Standard + Upgrade wallets combined)
+    const normalBal = Number(wallet.balance || 0);
+    const upgradeBal = Number(wallet.upgradeBalance !== undefined ? wallet.upgradeBalance : (wallet.upgrade_balance !== undefined ? wallet.upgrade_balance : 0));
+    if (normalBal + upgradeBal < pkgToActivate.price) {
+      alert(`Insufficient balance. Required: $${pkgToActivate.price}. Available: Standard Wallet $${normalBal.toFixed(2)}, Upgrade Wallet $${upgradeBal.toFixed(2)}.`);
       return;
     }
 
@@ -726,7 +750,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               </div>
 
               <div className="space-y-4 sm:space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 w-full">
                   {/* AVAILABLE BALANCE CARD */}
                   <div className="relative group/balance bg-black/40 border border-cyan-500/20 p-5 sm:p-6 rounded-3xl backdrop-blur-md hover:border-cyan-500/40 transition-all duration-300">
                     <div className="absolute -inset-1 bg-cyan-500/5 rounded-3xl blur-xl opacity-0 group-hover/balance:opacity-100 transition-opacity duration-500"></div>
@@ -743,6 +767,26 @@ const Dashboard: React.FC<DashboardProps> = ({
                           ${liveBalance !== undefined ? parseFloat(liveBalance.toFixed(4)) : '0'}
                         </span>
                         <span className="text-sm sm:text-lg font-black text-cyan-400 italic tracking-tighter opacity-80">USDT</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* UPGRADE WALLET CARD */}
+                  <div className="relative group/upgrade bg-black/40 border border-amber-500/20 p-5 sm:p-6 rounded-3xl backdrop-blur-md hover:border-amber-500/40 transition-all duration-300">
+                    <div className="absolute -inset-1 bg-amber-500/5 rounded-3xl blur-xl opacity-0 group-hover/upgrade:opacity-100 transition-opacity duration-500"></div>
+                    <div className="relative space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-1.5 h-4 bg-amber-400 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)]"></div>
+                          <span className="text-[10px] sm:text-[13px] font-black text-amber-400 uppercase tracking-widest">Upgrade Wallet</span>
+                        </div>
+                        <span className="text-[7px] sm:text-[9px] font-black text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20 tracking-widest uppercase">REINVESTMENT</span>
+                      </div>
+                      <div className="flex items-baseline gap-2 relative">
+                        <span className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tighter text-white drop-shadow-[0_10px_20px_rgba(245,158,11,0.2)] bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-amber-100 tabular-nums">
+                          ${wallet.upgradeBalance !== undefined ? parseFloat(Number(wallet.upgradeBalance).toFixed(4)) : (wallet.upgrade_balance !== undefined ? parseFloat(Number(wallet.upgrade_balance).toFixed(4)) : '0')}
+                        </span>
+                        <span className="text-sm sm:text-lg font-black text-amber-400 italic tracking-tighter opacity-80">USDT</span>
                       </div>
                     </div>
                   </div>
@@ -839,8 +883,8 @@ const Dashboard: React.FC<DashboardProps> = ({
         {/* MY ACTIVE PLAN SUMMARY (MERA PLAN) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 !mt-4">
           <div className="space-y-3">
-            {activePackages.filter(pkg => Number(pkg.price) === 10).map((pkg) => (
-              <div key={pkg.id} className="relative group">
+            {activePackages.filter(pkg => Number(pkg.price) === 10).map((pkg, idx) => (
+              <div key={pkg.purchaseId || `${pkg.id}_${idx}`} className="relative group">
                 <div 
                   onClick={() => onNavigate?.('mining')}
                   className="relative glass-card p-4 rounded-2xl border-cyan-500/30 bg-gradient-to-r from-cyan-500/10 to-transparent overflow-hidden cursor-pointer hover:border-cyan-500/50 transition-all"
@@ -1036,10 +1080,11 @@ const Dashboard: React.FC<DashboardProps> = ({
               const isActive = activePackages.some(ap => String(ap.id) === String(pkg.id));
               
               // Correct Sequential Locking logic
+              const hasUnlockedAll = sortedPackages.every(p => activePackages.some(ap => String(ap.id) === String(p.id)));
               let isLocked = false;
               let entryRequirement = "";
               
-              if (idx > 0) {
+              if (!hasUnlockedAll && idx > 0) {
                 const prevPkg = sortedPackages[idx - 1]; 
                 const hasPrevPkg = activePackages.some(ap => String(ap.id) === String(prevPkg.id));
                 if (!hasPrevPkg) {
@@ -1131,7 +1176,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                   {isActive && (
                     <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-md">
                       <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse"></div>
-                      <span className="text-[7px] font-black text-emerald-400 uppercase tracking-widest">Active</span>
+                      <span className="text-[7px] font-black text-emerald-400 uppercase tracking-widest">
+                        Active
+                      </span>
                     </div>
                   )}
 
@@ -1215,7 +1262,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                       </div>
                     )}
 
-                    <div className={`flex items-center justify-center gap-1.5 sm:gap-2 py-2 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-inner ${isLocked ? 'bg-white/5 text-slate-600 border border-white/5' : isActive ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : nodeStyle.buttonStyle}`}>
+                    <div className={`flex items-center justify-center gap-1.5 sm:gap-2 py-2 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-inner ${isLocked ? 'bg-white/5 text-slate-600 border border-white/5' : isActive ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : nodeStyle.buttonStyle}`}>
                       <span className="text-[7px] sm:text-[9px] font-black uppercase tracking-[0.1em] sm:tracking-[0.2em]">{isLocked ? 'Locked' : isActive ? 'Running' : 'Initialize'}</span>
                       {!isLocked && !isActive && <Zap size={10} className="sm:size-3" />}
                       {isActive && <Activity size={10} className="sm:size-3 animate-pulse" />}
@@ -1224,8 +1271,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                     {isActive && (
                       <div className="space-y-1.5 px-1">
                         <div className="flex justify-between items-center">
-                          <span className="text-[6px] font-black text-slate-500 uppercase tracking-widest">Yield Earned:</span>
-                          <span className="text-[8px] font-black text-emerald-400 italic">${(activePackages.find(ap => String(ap.id) === String(pkg.id))?.earned || 0).toFixed(2)}</span>
+                          <span className="text-[6px] font-black text-slate-500 uppercase tracking-widest">Total Yield Earned:</span>
+                          <span className="text-[8px] font-black text-emerald-400 italic">${activePackages.filter(ap => String(ap.id) === String(pkg.id)).reduce((sum, ap) => sum + (ap.earned || 0), 0).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-[6px] font-black text-slate-500 uppercase tracking-widest">Next Payout:</span>

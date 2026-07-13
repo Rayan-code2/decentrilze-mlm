@@ -50,6 +50,8 @@ export interface Wallet {
   level_income?: number;
   matrix_income?: number;
   hold_balance: number;
+  upgrade_balance?: number;
+  upgradeBalance?: number;
   total_roi_rate?: number;
   package_roi_rate?: number;
   base_roi_rate?: number;
