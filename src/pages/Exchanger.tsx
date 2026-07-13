@@ -29,6 +29,7 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [history, setHistory] = useState<ExchangerRequest[]>([]);
+  const [hasUnlockedAll, setHasUnlockedAll] = useState(false);
 
   const safeFormatDate = (rawDate: any): string => {
     try {
@@ -57,9 +58,12 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
       const isLive = isAppwriteConfigured();
       const api = isLive ? appwriteService : mockApi.db;
       
-      const [settingsData, historyData] = await Promise.all([
+      const uId = user.user_id || user.id || (user as any).$id;
+      const [settingsData, historyData, packagesList, userPurchases] = await Promise.all([
         api.getSettings(),
-        api.getExchangerRequests(user.user_id || user.id || (user as any).$id)
+        api.getExchangerRequests(uId),
+        api.getPackages(),
+        api.getUserPurchases(uId)
       ]);
       
       if (!settingsData) {
@@ -78,6 +82,14 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
         created_at: r.created_at || r.createdAt,
       }));
       setHistory(mappedHistory);
+
+      // Determine if user has active instances of all active packages
+      const activePurchaseIds = (userPurchases || [])
+        .filter((p: any) => p.is_active || p.isActive)
+        .map((p: any) => String(p.package_id || p.packageId));
+      const activePackagesList = (packagesList || []).filter((p: any) => p.is_active || p.isActive);
+      const unlockedAll = activePackagesList.length > 0 && activePackagesList.every((p: any) => activePurchaseIds.includes(String(p.id)));
+      setHasUnlockedAll(unlockedAll);
 
       // Auto-redirect if current tab is disabled, only switch if the alternate is actually active to prevent ping-pong loop!
       const finalSettings = settingsData || await mockApi.db.getSettings();
@@ -404,16 +416,24 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
               <p className="text-lg font-black text-white italic">${Number(amount || 0).toFixed(2)}</p>
             </div>
             <div>
-              <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest block mb-1">20% Upgrade Fund</span>
-              <p className="text-lg font-black text-amber-500 italic">+${(Number(amount || 0) * 0.2).toFixed(2)}</p>
+              <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest block mb-1">
+                {hasUnlockedAll ? '0% Upgrade Fund' : '20% Upgrade Fund'}
+              </span>
+              <p className="text-lg font-black text-amber-500 italic">
+                +${(Number(amount || 0) * (hasUnlockedAll ? 0.0 : 0.2)).toFixed(2)}
+              </p>
             </div>
             <div>
               <span className="text-[8px] font-black text-red-500/60 uppercase tracking-widest block mb-1">Fee ({withdrawalFee}%)</span>
               <p className="text-lg font-black text-red-500/60 italic">-${(Number(amount || 0) * (withdrawalFee / 100)).toFixed(2)}</p>
             </div>
             <div>
-              <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest block mb-1">Net Dispatched (80%)</span>
-              <p className="text-lg font-black text-emerald-400 italic">${(Number(amount || 0) * 0.8).toFixed(2)}</p>
+              <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest block mb-1">
+                {hasUnlockedAll ? 'Net Dispatched (100%)' : 'Net Dispatched (80%)'}
+              </span>
+              <p className="text-lg font-black text-emerald-400 italic">
+                ${(Number(amount || 0) * (hasUnlockedAll ? 1.0 : 0.8)).toFixed(2)}
+              </p>
             </div>
           </div>
           
@@ -421,13 +441,19 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
             <div className="space-y-2 text-center sm:text-left">
               <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em]">Estimated Net Received (Minus Fee)</span>
               <div className="flex items-baseline justify-center sm:justify-start gap-2 sm:gap-3">
-                <span className="text-3xl sm:text-5xl font-black text-emerald-400 italic tracking-tighter leading-none">${Math.max(0, (Number(amount || 0) * (0.8 - withdrawalFee / 100))).toFixed(2)}</span>
+                <span className="text-3xl sm:text-5xl font-black text-emerald-400 italic tracking-tighter leading-none">
+                  ${Math.max(0, (Number(amount || 0) * ((hasUnlockedAll ? 1.0 : 0.8) - withdrawalFee / 100))).toFixed(2)}
+                </span>
                 <span className="text-xs sm:text-sm font-black text-emerald-500/60 uppercase">Net</span>
               </div>
             </div>
             <div className="text-center sm:text-right bg-black/40 px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-white/5 w-full sm:w-auto">
-              <span className="text-[7px] sm:text-[8px] font-black text-amber-500 uppercase tracking-widest block mb-0.5 sm:mb-1">Credited to Upgrade Wallet</span>
-              <p className="text-lg sm:text-xl font-black text-amber-500 italic leading-none">+${(Number(amount || 0) * 0.2).toFixed(2)}</p>
+              <span className="text-[7px] sm:text-[8px] font-black text-amber-500 uppercase tracking-widest block mb-0.5 sm:mb-1">
+                {hasUnlockedAll ? 'Reinvestment Exempt' : 'Credited to Upgrade Wallet'}
+              </span>
+              <p className="text-lg sm:text-xl font-black text-amber-500 italic leading-none text-amber-500">
+                {hasUnlockedAll ? 'All Nodes Active' : `+$${(Number(amount || 0) * 0.2).toFixed(2)}`}
+              </p>
             </div>
           </div>
         </div>
