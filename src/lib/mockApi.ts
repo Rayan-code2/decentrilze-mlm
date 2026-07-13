@@ -361,7 +361,32 @@ export const mockApi = {
         } else if (request.type === 'withdraw') {
           // Withdrawal logic - balance already deducted on request creation
           // Update total withdrawn tracking
-          wallet.total_withdrawn = (wallet.total_withdrawn || 0) + request.amount;
+          const refundToUpgrade = Number((request.amount * 0.20).toFixed(4));
+          const netWithdrawn = Number((request.amount - refundToUpgrade).toFixed(4));
+          
+          if (wallet.upgrade_balance !== undefined) {
+            wallet.upgrade_balance = Number(((wallet.upgrade_balance || 0) + refundToUpgrade).toFixed(4));
+          }
+          if (wallet.upgradeBalance !== undefined) {
+            wallet.upgradeBalance = Number(((wallet.upgradeBalance || 0) + refundToUpgrade).toFixed(4));
+          } else {
+            wallet.upgradeBalance = refundToUpgrade;
+          }
+          wallet.total_withdrawn = Number(((wallet.total_withdrawn || 0) + netWithdrawn).toFixed(4));
+          
+          // Add transaction logs for net withdrawal and upgrade fund
+          mockApi.db.addTransaction(request.user_id, {
+            amount: netWithdrawn,
+            type: 'withdraw',
+            description: `USDT Withdrawal Dispatched: $${netWithdrawn} (20% Upgrade Fund deducted)`,
+            from_user_id: 'SYSTEM'
+          });
+          mockApi.db.addTransaction(request.user_id, {
+            amount: refundToUpgrade,
+            type: 'upgrade_fund',
+            description: `20% Reinvestment from Withdrawal: $${refundToUpgrade}`,
+            from_user_id: 'SYSTEM'
+          });
         }
         localStorage.setItem(`spiral_wallet_${request.user_id}`, JSON.stringify(wallet));
       } else if (status === 'rejected') {

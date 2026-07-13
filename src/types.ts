@@ -71,7 +71,7 @@ export interface Transaction {
   id: string;
   user_id: string;
   amount: number;
-  type: 'roi' | 'level' | 'direct' | 'exchange' | 'task' | 'topup' | 'withdraw' | 'transfer' | 'level_income' | 'direct_income' | 'spin';
+  type: 'roi' | 'level' | 'direct' | 'exchange' | 'task' | 'topup' | 'withdraw' | 'transfer' | 'level_income' | 'direct_income' | 'spin' | 'upgrade_fund' | 'rank_reward' | 'matrix_income';
   status: 'pending' | 'completed' | 'failed';
   created_at: string;
   description?: string;
