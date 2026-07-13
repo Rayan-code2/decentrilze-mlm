@@ -1589,8 +1589,13 @@ app.post('/api/admin/handle-request', verifyAdmin, async (req: any, res: any) =>
                     fromUserId: 'SYSTEM' 
                 });
             } else {
-                // Withdrawal approval: Deduct hold balance, add 20% to upgradeBalance, and 80% to totalWithdrawn
-                const refundToUpgrade = Number((amt * 0.20).toFixed(4));
+                // Check if user has unlocked all packages. If yes, refundToUpgrade should be 0.
+                const userPurchases = await db.select().from(purchases).where(and(eq(purchases.userId, userId), eq(purchases.isActive, true)));
+                const activePurchaseIds = userPurchases.map(p => p.packageId);
+                const catalogue = await db.select().from(mlmPackages);
+                const hasUnlockedAll = catalogue.length > 0 && catalogue.every(p => activePurchaseIds.includes(p.id));
+
+                const refundToUpgrade = hasUnlockedAll ? 0 : Number((amt * 0.20).toFixed(4));
                 const netWithdrawn = Number((amt - refundToUpgrade).toFixed(4));
 
                 await db.update(wallets).set({ 
@@ -1605,19 +1610,23 @@ app.post('/api/admin/handle-request', verifyAdmin, async (req: any, res: any) =>
                     amount: netWithdrawn, 
                     type: 'withdraw', 
                     status: 'completed', 
-                    description: `USDT Withdrawal Dispatched: $${netWithdrawn} (20% Upgrade Fund deducted)`, 
+                    description: hasUnlockedAll
+                        ? `USDT Withdrawal Dispatched: $${netWithdrawn} (All packages active, 0% Upgrade Fund deducted)`
+                        : `USDT Withdrawal Dispatched: $${netWithdrawn} (20% Upgrade Fund deducted)`, 
                     fromUserId: 'SYSTEM' 
                 });
 
-                // Insert Transaction Log for upgrade fund credit
-                await db.insert(transactions).values({ 
-                    userId, 
-                    amount: refundToUpgrade, 
-                    type: 'upgrade_fund', 
-                    status: 'completed', 
-                    description: `20% Reinvestment from Withdrawal: $${refundToUpgrade}`, 
-                    fromUserId: 'SYSTEM' 
-                });
+                if (refundToUpgrade > 0) {
+                    // Insert Transaction Log for upgrade fund credit
+                    await db.insert(transactions).values({ 
+                        userId, 
+                        amount: refundToUpgrade, 
+                        type: 'upgrade_fund', 
+                        status: 'completed', 
+                        description: `20% Reinvestment from Withdrawal: $${refundToUpgrade}`, 
+                        fromUserId: 'SYSTEM' 
+                    });
+                }
             }
             
             // Set Request Status to Approved last

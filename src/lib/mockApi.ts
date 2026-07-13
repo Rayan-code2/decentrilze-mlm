@@ -361,16 +361,25 @@ export const mockApi = {
         } else if (request.type === 'withdraw') {
           // Withdrawal logic - balance already deducted on request creation
           // Update total withdrawn tracking
-          const refundToUpgrade = Number((request.amount * 0.20).toFixed(4));
+          const purchasedKey = `purchased_packages_${request.user_id}`;
+          const rawPurchases: any[] = JSON.parse(localStorage.getItem(purchasedKey) || '[]');
+          const packages = await mockApi.db.getPackages();
+          
+          const purchasedIds = rawPurchases.map(p => typeof p === 'string' ? p : p.id);
+          const hasUnlockedAll = packages.length > 0 && packages.every(p => purchasedIds.includes(p.id));
+
+          const refundToUpgrade = hasUnlockedAll ? 0 : Number((request.amount * 0.20).toFixed(4));
           const netWithdrawn = Number((request.amount - refundToUpgrade).toFixed(4));
           
-          if (wallet.upgrade_balance !== undefined) {
-            wallet.upgrade_balance = Number(((wallet.upgrade_balance || 0) + refundToUpgrade).toFixed(4));
-          }
-          if (wallet.upgradeBalance !== undefined) {
-            wallet.upgradeBalance = Number(((wallet.upgradeBalance || 0) + refundToUpgrade).toFixed(4));
-          } else {
-            wallet.upgradeBalance = refundToUpgrade;
+          if (refundToUpgrade > 0) {
+            if (wallet.upgrade_balance !== undefined) {
+              wallet.upgrade_balance = Number(((wallet.upgrade_balance || 0) + refundToUpgrade).toFixed(4));
+            }
+            if (wallet.upgradeBalance !== undefined) {
+              wallet.upgradeBalance = Number(((wallet.upgradeBalance || 0) + refundToUpgrade).toFixed(4));
+            } else {
+              wallet.upgradeBalance = refundToUpgrade;
+            }
           }
           wallet.total_withdrawn = Number(((wallet.total_withdrawn || 0) + netWithdrawn).toFixed(4));
           
@@ -378,15 +387,20 @@ export const mockApi = {
           mockApi.db.addTransaction(request.user_id, {
             amount: netWithdrawn,
             type: 'withdraw',
-            description: `USDT Withdrawal Dispatched: $${netWithdrawn} (20% Upgrade Fund deducted)`,
+            description: hasUnlockedAll 
+              ? `USDT Withdrawal Dispatched: $${netWithdrawn} (All packages active, 0% Upgrade Fund deducted)`
+              : `USDT Withdrawal Dispatched: $${netWithdrawn} (20% Upgrade Fund deducted)`,
             from_user_id: 'SYSTEM'
           });
-          mockApi.db.addTransaction(request.user_id, {
-            amount: refundToUpgrade,
-            type: 'upgrade_fund',
-            description: `20% Reinvestment from Withdrawal: $${refundToUpgrade}`,
-            from_user_id: 'SYSTEM'
-          });
+
+          if (refundToUpgrade > 0) {
+            mockApi.db.addTransaction(request.user_id, {
+              amount: refundToUpgrade,
+              type: 'upgrade_fund',
+              description: `20% Reinvestment from Withdrawal: $${refundToUpgrade}`,
+              from_user_id: 'SYSTEM'
+            });
+          }
         }
         localStorage.setItem(`spiral_wallet_${request.user_id}`, JSON.stringify(wallet));
       } else if (status === 'rejected') {
