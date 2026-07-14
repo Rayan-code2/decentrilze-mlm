@@ -1590,12 +1590,35 @@ app.post('/api/admin/handle-request', verifyAdmin, async (req: any, res: any) =>
                 });
             } else {
                 // Check if user has an active 40$ package (the last package). If yes, refundToUpgrade should be 0.
-                const userPurchases = await db.select().from(purchases).where(and(eq(purchases.userId, userId), eq(purchases.isActive, true)));
+                const targetUserId = String(userId || '').trim();
+                const resolvedUserId = await resolveUserAuthId(targetUserId) || targetUserId;
+                const userPurchases = await db.select().from(purchases).where(
+                    and(
+                        or(
+                            eq(purchases.userId, targetUserId),
+                            eq(purchases.userId, resolvedUserId),
+                            eq(sql`LOWER(${purchases.userId})`, targetUserId.toLowerCase()),
+                            eq(sql`LOWER(${purchases.userId})`, resolvedUserId.toLowerCase())
+                        ),
+                        eq(purchases.isActive, true)
+                    )
+                );
                 const catalogue = await db.select().from(mlmPackages);
+                
+                let maxCatalogPrice = 40;
+                if (catalogue.length > 0) {
+                    maxCatalogPrice = Math.max(...catalogue.map(p => Number(p.price || 0)));
+                }
+
                 const hasUnlockedAll = userPurchases.some(purchase => {
+                    const pPrice = Number(purchase.price || 0);
                     const pkg = catalogue.find(c => Number(c.id) === Number(purchase.packageId));
-                    const price = pkg ? Number(pkg.price) : Number(purchase.price || 0);
-                    return Math.round(price) === 40;
+                    const catPrice = pkg ? Number(pkg.price || 0) : 0;
+                    
+                    const actualPrice = pPrice > 0 ? pPrice : catPrice;
+                    const roundedPrice = Math.round(actualPrice);
+
+                    return roundedPrice >= 40 || roundedPrice >= Math.round(maxCatalogPrice);
                 });
 
                 const refundToUpgrade = hasUnlockedAll ? 0 : Number((amt * 0.20).toFixed(4));
