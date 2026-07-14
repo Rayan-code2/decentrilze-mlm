@@ -1589,18 +1589,15 @@ app.post('/api/admin/handle-request', verifyAdmin, async (req: any, res: any) =>
                     fromUserId: 'SYSTEM' 
                 });
             } else {
-                // Check if user has an active 40$ package (the last package). If yes, refundToUpgrade should be 0.
+                // Check if user has ever purchased a 40$ package (the last package). If yes, refundToUpgrade should be 0.
                 const targetUserId = String(userId || '').trim();
                 const resolvedUserId = await resolveUserAuthId(targetUserId) || targetUserId;
                 const userPurchases = await db.select().from(purchases).where(
-                    and(
-                        or(
-                            eq(purchases.userId, targetUserId),
-                            eq(purchases.userId, resolvedUserId),
-                            eq(sql`LOWER(${purchases.userId})`, targetUserId.toLowerCase()),
-                            eq(sql`LOWER(${purchases.userId})`, resolvedUserId.toLowerCase())
-                        ),
-                        eq(purchases.isActive, true)
+                    or(
+                        eq(purchases.userId, targetUserId),
+                        eq(purchases.userId, resolvedUserId),
+                        eq(sql`LOWER(${purchases.userId})`, targetUserId.toLowerCase()),
+                        eq(sql`LOWER(${purchases.userId})`, resolvedUserId.toLowerCase())
                     )
                 );
                 const catalogue = await db.select().from(mlmPackages);

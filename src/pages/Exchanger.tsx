@@ -83,12 +83,11 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
       }));
       setHistory(mappedHistory);
 
-      // Determine if user has the active 40$ package (the final package)
+      // Determine if user has ever purchased the 40$ package (the final package)
       const unlockedAll = (userPurchases || []).some((p: any) => {
-        const isActive = p.is_active !== undefined ? p.is_active : p.isActive;
         const matchingPkg = (packagesList || []).find((pkg: any) => String(pkg.id) === String(p.package_id || p.packageId));
         const price = matchingPkg ? matchingPkg.price : (p.price !== undefined ? p.price : (p.amount !== undefined ? p.amount : 0));
-        return (isActive === true || isActive === 1) && Math.round(Number(price)) === 40;
+        return Math.round(Number(price)) === 40;
       });
       setHasUnlockedAll(unlockedAll);
 
