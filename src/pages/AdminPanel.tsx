@@ -827,15 +827,40 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                     <div>
                       <h4 className="text-white font-black text-sm italic uppercase tracking-tighter">{req.type.toUpperCase()} - ${req.amount}</h4>
                       {req.inr_amount && <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest">INR: ₹{req.inr_amount}</p>}
-                      <div className="flex gap-4 mt-1">
+                      <div className="flex flex-col gap-1 mt-1">
                         <p className="text-slate-500 text-[8px] font-black uppercase tracking-widest">
                           User: <span className="text-cyan-400 font-bold text-[9px]">{req.userName || req.user_name || 'N/A'}</span> ({req.user_id}) | {req.userEmail || req.user_email ? `${req.userEmail || req.user_email} | ` : ''}{new Date(req.created_at).toLocaleString()}
                         </p>
-                        {req.fee !== undefined && (req.type === 'withdraw' || req.type === 'sell') && (
-                          <p className="text-rose-400 text-[8px] font-black uppercase tracking-widest">
-                            Fee: ${Number(req.fee).toFixed(2)} ({((Number(req.fee) / (Number(req.amount) || 1)) * 100).toFixed(0)}%) | Net: ${(Number(req.amount) - Number(req.fee)).toFixed(2)}
-                          </p>
-                        )}
+                        {req.fee !== undefined && (req.type === 'withdraw' || req.type === 'sell') && (() => {
+                          const reqUserId = String(req.user_id || req.userId || '').trim().toLowerCase();
+                          const userPurchases = (purchases || []).filter((p: any) => {
+                            const pUserId = String(p.user_id || p.userId || '').trim().toLowerCase();
+                            return pUserId === reqUserId;
+                          });
+                          const hasUnlockedAll = userPurchases.some((p: any) => {
+                            const matchingPkg = packages.find((pkg: any) => String(pkg.id) === String(p.package_id || p.packageId));
+                            const price = matchingPkg ? matchingPkg.price : (p.price !== undefined ? p.price : 0);
+                            return Math.round(Number(price)) === 40;
+                          });
+                          
+                          const feeAmt = Number(req.fee);
+                          const upgradeFundAmt = hasUnlockedAll ? 0 : Number((Number(req.amount) * 0.20).toFixed(4));
+                          const actualPay = Math.max(0, Number(req.amount) - feeAmt - upgradeFundAmt);
+                          
+                          return (
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 p-3 rounded-2xl bg-white/5 border border-white/5">
+                              <span className="text-rose-400 text-[9px] font-black uppercase tracking-widest">
+                                Admin Fee: ${feeAmt.toFixed(2)} ({((feeAmt / (Number(req.amount) || 1)) * 100).toFixed(0)}%)
+                              </span>
+                              <span className={`text-[9px] font-black uppercase tracking-widest ${upgradeFundAmt > 0 ? "text-amber-400" : "text-emerald-400"}`}>
+                                Upgrade Fund (20%): ${upgradeFundAmt.toFixed(2)} {hasUnlockedAll ? "(UNLOCKED)" : ""}
+                              </span>
+                              <span className="text-cyan-400 font-black text-[10px] uppercase tracking-widest bg-cyan-400/10 px-2.5 py-1 rounded-xl border border-cyan-400/20 shadow-[0_0_15px_rgba(34,211,238,0.1)]">
+                                ACTUAL PAYOUT: ${actualPay.toFixed(2)}
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </div>
                       {req.utr_number && (
                         <div className="flex items-center gap-2 mt-2 group/copy">
