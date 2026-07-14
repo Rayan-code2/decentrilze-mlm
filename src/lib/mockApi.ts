@@ -365,8 +365,17 @@ export const mockApi = {
           const rawPurchases: any[] = JSON.parse(localStorage.getItem(purchasedKey) || '[]');
           const packages = await mockApi.db.getPackages();
           
-          const purchasedIds = rawPurchases.map(p => typeof p === 'string' ? p : p.id);
-          const hasUnlockedAll = packages.length > 0 && packages.every(p => purchasedIds.includes(p.id));
+          const activePkgs = packages.filter(p => {
+            const purchase = rawPurchases.find(rp => (typeof rp === 'string' ? rp === p.id : rp.id === p.id));
+            if (!purchase) return false;
+            if (typeof purchase === 'object' && purchase.activated_at) {
+              const activatedAt = purchase.activated_at;
+              const durationMs = (p.duration_days || 365) * 86400000;
+              if (Date.now() - activatedAt > durationMs) return false;
+            }
+            return true;
+          });
+          const hasUnlockedAll = activePkgs.some(p => Math.round(p.price) === 40);
 
           const refundToUpgrade = hasUnlockedAll ? 0 : Number((request.amount * 0.20).toFixed(4));
           const netWithdrawn = Number((request.amount - refundToUpgrade).toFixed(4));

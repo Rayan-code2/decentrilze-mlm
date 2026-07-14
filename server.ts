@@ -1589,11 +1589,14 @@ app.post('/api/admin/handle-request', verifyAdmin, async (req: any, res: any) =>
                     fromUserId: 'SYSTEM' 
                 });
             } else {
-                // Check if user has unlocked all packages. If yes, refundToUpgrade should be 0.
+                // Check if user has an active 40$ package (the last package). If yes, refundToUpgrade should be 0.
                 const userPurchases = await db.select().from(purchases).where(and(eq(purchases.userId, userId), eq(purchases.isActive, true)));
-                const activePurchaseIds = userPurchases.map(p => p.packageId);
                 const catalogue = await db.select().from(mlmPackages);
-                const hasUnlockedAll = catalogue.length > 0 && catalogue.every(p => activePurchaseIds.includes(p.id));
+                const hasUnlockedAll = userPurchases.some(purchase => {
+                    const pkg = catalogue.find(c => Number(c.id) === Number(purchase.packageId));
+                    const price = pkg ? Number(pkg.price) : Number(purchase.price || 0);
+                    return Math.round(price) === 40;
+                });
 
                 const refundToUpgrade = hasUnlockedAll ? 0 : Number((amt * 0.20).toFixed(4));
                 const netWithdrawn = Number((amt - refundToUpgrade).toFixed(4));

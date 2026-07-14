@@ -83,12 +83,13 @@ const Exchanger: React.FC<ExchangerProps> = ({ user, wallet, initialSubTab = 'to
       }));
       setHistory(mappedHistory);
 
-      // Determine if user has active instances of all active packages
-      const activePurchaseIds = (userPurchases || [])
-        .filter((p: any) => p.is_active || p.isActive)
-        .map((p: any) => String(p.package_id || p.packageId));
-      const activePackagesList = (packagesList || []).filter((p: any) => p.is_active || p.isActive);
-      const unlockedAll = activePackagesList.length > 0 && activePackagesList.every((p: any) => activePurchaseIds.includes(String(p.id)));
+      // Determine if user has the active 40$ package (the final package)
+      const unlockedAll = (userPurchases || []).some((p: any) => {
+        const isActive = p.is_active !== undefined ? p.is_active : p.isActive;
+        const matchingPkg = (packagesList || []).find((pkg: any) => String(pkg.id) === String(p.package_id || p.packageId));
+        const price = matchingPkg ? matchingPkg.price : (p.price !== undefined ? p.price : (p.amount !== undefined ? p.amount : 0));
+        return (isActive === true || isActive === 1) && Math.round(Number(price)) === 40;
+      });
       setHasUnlockedAll(unlockedAll);
 
       // Auto-redirect if current tab is disabled, only switch if the alternate is actually active to prevent ping-pong loop!
