@@ -404,9 +404,9 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
             <button 
               onClick={() => setActiveTab('generations')}
               className={`px-4 sm:px-6 py-2.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'generations' ? 'bg-electric text-obsidian shadow-[0_0_20px_rgba(204,255,0,0.3)]' : 'text-slate-muted hover:text-white'}`}
-              title="Referral Generation (G1 shows all your direct referrals)"
+              title="Referral Level Income (G1 to G10 showing member levels & income yield)"
             >
-              Network (Gen)
+              Level Income
             </button>
           </div>
         </div>
@@ -651,7 +651,7 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
                     })()}
                     <p className="text-[8px] font-bold text-slate-500 uppercase tracking-[0.1em] mt-0.5">
                       {activeTab === 'generations' 
-                        ? `Generation ${Object.keys(generationDownlineUsers).find(lvl => generationDownlineUsers[Number(lvl)].some(u => u.id === node.id || (u.user_id && u.user_id === node.user_id))) || '?'}` 
+                        ? `Referral Level ${Object.keys(generationDownlineUsers).find(lvl => generationDownlineUsers[Number(lvl)].some(u => u.id === node.id || (u.user_id && u.user_id === node.user_id))) || '?'}` 
                         : activeTab === 'matrix'
                         ? `Matrix Level ${Object.keys(matrixDownlineUsers).find(lvl => matrixDownlineUsers[Number(lvl)].some(u => u.id === node.id || (u.user_id && u.user_id === node.user_id))) || '?'}`
                         : node.active_package}
@@ -797,13 +797,13 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-black text-white italic tracking-tight uppercase flex items-center gap-2">
-            {activeTab === 'matrix' ? 'Matrix Levels' : 'Network Generations'}
+            {activeTab === 'matrix' ? 'Matrix Levels' : 'Level Income (Generations)'}
           </h3>
           <div className="hidden sm:block px-4 py-2 rounded-xl bg-white/5 border border-white/10">
             <p className="text-[10px] font-black text-slate-muted uppercase tracking-widest">
               {activeTab === 'matrix' 
                 ? 'Showing placement in 2x2 structure' 
-                : 'Showing your direct referral generations'}
+                : 'Showing referral level statistics & yields'}
             </p>
           </div>
         </div>
@@ -811,7 +811,7 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
           <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
             {activeTab === 'matrix' 
               ? 'Matrix Level 1 can only have 2 people. Extra people spill over to Level 2, 3, etc.' 
-              : 'Generation 1 shows ALL your direct referrals. If you refer 4 people, all 4 will appear in G1.'}
+              : 'Referral Level 1 shows ALL your direct referrals. Subsequent levels show downline generations up to Level 10.'}
           </p>
         </div>
       </div>
@@ -819,8 +819,8 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((lvl) => {
           const stats = activeTab === 'matrix' ? matrixLevelStats[lvl] : generationLevelStats[lvl];
-          const label = activeTab === 'matrix' ? 'Matrix Level' : 'Generation';
-          const prefix = activeTab === 'matrix' ? 'L' : 'G';
+          const label = activeTab === 'matrix' ? 'Matrix Level' : 'Referral Level';
+          const prefix = activeTab === 'matrix' ? 'L' : 'LVL';
           
           let levelIncomeValue = 0;
           if (activeTab === 'matrix') {
@@ -900,7 +900,7 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
               </div>
               <div>
               <h3 className="text-xl font-black text-white italic uppercase tracking-tight">
-                {activeTab === 'matrix' ? `Matrix Level ${selectedLevel}` : `Generation ${selectedLevel}`} Nodes
+                {activeTab === 'matrix' ? `Matrix Level ${selectedLevel}` : `Referral Level ${selectedLevel}`} Nodes
               </h3>
               <p className="text-[10px] font-black text-slate-muted uppercase tracking-widest">
                 Total Active Nodes: {(activeTab === 'matrix' ? matrixDownlineUsers[selectedLevel] : generationDownlineUsers[selectedLevel])?.length || 0}
@@ -968,7 +968,7 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center bg-white/2 rounded-2xl border border-white/5">
                     <Users size={32} className="mx-auto text-slate-700 mb-3" />
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">No nodes detected in {activeTab === 'matrix' ? `Matrix Level` : `Generation`} {selectedLevel}</p>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">No nodes detected in {activeTab === 'matrix' ? `Matrix Level` : `Referral Level`} {selectedLevel}</p>
                   </td>
                 </tr>
               )}
