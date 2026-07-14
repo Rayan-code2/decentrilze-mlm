@@ -680,15 +680,86 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
         </div>
       </div>
 
-      {/* Level Distribution Grid */}
-      <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-4">
-        <AlertCircle className="text-amber-400 shrink-0 mt-0.5" size={18} />
-        <div>
-          <p className="text-xs font-black text-amber-400 uppercase tracking-widest mb-1">Income Protocol Rule</p>
-          <p className="text-[10px] font-medium text-slate-300 leading-relaxed">
-            Yield distribution is dynamically calculated based on your active mining protocols. 
-            Check your <span className="text-white font-bold">Active Nodes</span> to see your current generation unlocking status.
-          </p>
+      {/* Level Distribution Grid / Level Unlock Conditions */}
+      <div className="p-6 rounded-[2rem] bg-gradient-to-br from-[#0a140a] via-[#050b05] to-black border border-emerald-500/20 relative overflow-hidden shadow-[0_15px_30px_rgba(0,0,0,0.6)]">
+        {/* Holographic glowing light source */}
+        <div className="absolute top-0 left-1/4 w-48 h-12 bg-emerald-500/10 blur-3xl rounded-full"></div>
+        <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-emerald-500/5 blur-3xl rounded-full"></div>
+        
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]"></span>
+              <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] leading-none">SECURITY PROTOCOL</p>
+            </div>
+            <h3 className="text-xl font-black text-white italic tracking-tighter uppercase mt-1">LEVEL UNLOCKING MATRIX</h3>
+          </div>
+          <div className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black text-emerald-400 uppercase tracking-widest text-center">
+            ACTIVE VERIFICATION STATUS
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
+          {/* Stage 1 */}
+          <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-emerald-500/30 transition-all group/card flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded-md">STAGE 1</span>
+                <span className="text-[10px] font-mono font-black text-slate-muted">L1 - L3</span>
+              </div>
+              <p className="text-xs font-black text-white uppercase tracking-tight">PACKAGE $10</p>
+              <p className="text-[9px] text-slate-400 font-medium mt-1.5 leading-relaxed">Level 1 to 3 automatically unlocked. Yields <span className="text-emerald-400 font-bold">$0.50</span> per referral node.</p>
+            </div>
+            <div className="mt-4 text-[8px] font-black uppercase text-emerald-400 tracking-wider flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]"></span>
+              <span>UNCONDITIONAL UNLOCK</span>
+            </div>
+          </div>
+
+          {/* Stage 2 */}
+          <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-cyan-500/30 transition-all group/card flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[8px] font-black text-cyan-400 uppercase tracking-widest bg-cyan-500/10 px-2 py-0.5 rounded-md">STAGE 2</span>
+                <span className="text-[10px] font-mono font-black text-slate-muted">L4 - L6</span>
+              </div>
+              <p className="text-xs font-black text-white uppercase tracking-tight">PACKAGE $20</p>
+              <p className="text-[9px] text-slate-400 font-medium mt-1.5 leading-relaxed">Level 4 to 6 unlocks. Yields <span className="text-cyan-400 font-bold">$1.00</span> per referral node.</p>
+            </div>
+            <div className="mt-4 text-[8px] font-black uppercase text-cyan-400 tracking-wider flex items-center gap-1.5">
+              <span>+ 2 DIRECT REFERRALS</span>
+            </div>
+          </div>
+
+          {/* Stage 3 */}
+          <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-amber-500/30 transition-all group/card flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[8px] font-black text-amber-400 uppercase tracking-widest bg-amber-500/10 px-2 py-0.5 rounded-md">STAGE 3</span>
+                <span className="text-[10px] font-mono font-black text-slate-muted">L7 - L8</span>
+              </div>
+              <p className="text-xs font-black text-white uppercase tracking-tight">PACKAGE $30</p>
+              <p className="text-[9px] text-slate-400 font-medium mt-1.5 leading-relaxed">Level 7 to 8 unlocks. Yields <span className="text-amber-400 font-bold">$2.00</span> per referral node.</p>
+            </div>
+            <div className="mt-4 text-[8px] font-black uppercase text-amber-400 tracking-wider flex items-center gap-1.5">
+              <span>+ 3 DIRECT REFERRALS</span>
+            </div>
+          </div>
+
+          {/* Stage 4 */}
+          <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-rose-500/30 transition-all group/card flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[8px] font-black text-rose-400 uppercase tracking-widest bg-rose-500/10 px-2 py-0.5 rounded-md">STAGE 4</span>
+                <span className="text-[10px] font-mono font-black text-slate-muted">L9 - L10</span>
+              </div>
+              <p className="text-xs font-black text-white uppercase tracking-tight">PACKAGE $40</p>
+              <p className="text-[9px] text-slate-400 font-medium mt-1.5 leading-relaxed">Level 9 to 10 unlocks. Yields <span className="text-rose-400 font-bold">$3.00 & $5.00</span> per node.</p>
+            </div>
+            <div className="mt-4 text-[8px] font-black uppercase text-rose-400 tracking-wider flex items-center gap-1.5">
+              <span>+ 4 DIRECT REFERRALS</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -751,17 +822,16 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
           const label = activeTab === 'matrix' ? 'Matrix Level' : 'Generation';
           const prefix = activeTab === 'matrix' ? 'L' : 'G';
           
-          const packageIncomes: { [key: number]: number[] } = activeTab === 'matrix' ? {
-            10: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            20: [2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-            30: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
-            40: [4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
-          } : {
-            10: [0.5, 0.5, 0.5, 1, 1, 1, 2, 2, 3, 5],
-            20: [1, 1, 1, 2, 2, 2, 4, 4, 6, 10],
-            30: [1.5, 1.5, 1.5, 3, 3, 3, 6, 6, 9, 15],
-            40: [2, 2, 2, 4, 4, 4, 8, 8, 12, 20]
-          };
+          let levelIncomeValue = 0;
+          if (activeTab === 'matrix') {
+            levelIncomeValue = lvl === 1 ? 1.00 : 0.10;
+          } else {
+            if (lvl <= 3) levelIncomeValue = 0.50;
+            else if (lvl <= 6) levelIncomeValue = 1.00;
+            else if (lvl <= 8) levelIncomeValue = 2.00;
+            else if (lvl === 9) levelIncomeValue = 3.00;
+            else levelIncomeValue = 5.00;
+          }
 
           let reqText = "";
           if (activeTab === 'matrix') {
@@ -809,23 +879,11 @@ const MatrixTree: React.FC<{ user: User }> = ({ user }) => {
                 </div>
               </div>
               
-              <div className="pt-2 border-t border-white/5 grid grid-cols-2 gap-x-2 gap-y-1 relative z-10 text-[8px] leading-tight">
-                <div className="flex justify-between items-center bg-emerald-500/5 px-1.5 py-0.5 rounded">
-                  <span className="text-slate-400 font-bold block">In ($10)</span>
-                  <span className="font-mono font-black text-emerald-400">${packageIncomes[10][lvl - 1].toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center bg-cyan-500/5 px-1.5 py-0.5 rounded">
-                  <span className="text-slate-400 font-bold block">In ($20)</span>
-                  <span className="font-mono font-black text-cyan-400">${packageIncomes[20][lvl - 1].toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center bg-amber-500/5 px-1.5 py-0.5 rounded">
-                  <span className="text-slate-400 font-bold block">In ($30)</span>
-                  <span className="font-mono font-black text-amber-400">${packageIncomes[30][lvl - 1].toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center bg-rose-500/5 px-1.5 py-0.5 rounded">
-                  <span className="text-slate-400 font-bold block">In ($40)</span>
-                  <span className="font-mono font-black text-rose-400">${packageIncomes[40][lvl - 1].toFixed(2)}</span>
-                </div>
+              <div className="pt-2 border-t border-white/5 flex justify-between items-center relative z-10">
+                <span className="text-[8px] font-black text-slate-muted uppercase tracking-widest">Level Yield:</span>
+                <span className="text-xs font-black text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
+                  ${levelIncomeValue.toFixed(2)}
+                </span>
               </div>
             </button>
           );
