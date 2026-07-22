@@ -766,7 +766,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                         <span className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tighter text-white drop-shadow-[0_10px_20px_rgba(0,229,255,0.2)] bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-cyan-100 tabular-nums">
                           ${liveBalance !== undefined ? parseFloat(liveBalance.toFixed(4)) : '0'}
                         </span>
-                        <span className="text-sm sm:text-lg font-black text-cyan-400 italic tracking-tighter opacity-80">USDT</span>
+                        <span className="text-sm sm:text-lg font-black text-cyan-400 italic tracking-tighter opacity-80">$</span>
                       </div>
                     </div>
                   </div>
@@ -786,7 +786,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                         <span className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tighter text-white drop-shadow-[0_10px_20px_rgba(245,158,11,0.2)] bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-amber-100 tabular-nums">
                           ${wallet.upgradeBalance !== undefined ? parseFloat(Number(wallet.upgradeBalance).toFixed(4)) : (wallet.upgrade_balance !== undefined ? parseFloat(Number(wallet.upgrade_balance).toFixed(4)) : '0')}
                         </span>
-                        <span className="text-sm sm:text-lg font-black text-amber-400 italic tracking-tighter opacity-80">USDT</span>
+                        <span className="text-sm sm:text-lg font-black text-amber-400 italic tracking-tighter opacity-80">$</span>
                       </div>
                     </div>
                   </div>
@@ -806,7 +806,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                         <span className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tighter text-white drop-shadow-[0_10px_20px_rgba(168,85,247,0.2)] bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-purple-100 tabular-nums">
                           ${liveTotalEarned !== undefined ? parseFloat(liveTotalEarned.toFixed(4)) : '0'}
                         </span>
-                        <span className="text-sm sm:text-lg font-black text-purple-400 italic tracking-tighter opacity-80">USDT</span>
+                        <span className="text-sm sm:text-lg font-black text-purple-400 italic tracking-tighter opacity-80">$</span>
                       </div>
                     </div>
                   </div>
@@ -1308,7 +1308,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Wallet ROI</span>
               <div className="flex items-baseline gap-2">
                 <p className="text-3xl font-mono font-black text-white tracking-tighter">${liveWalletROI.toFixed(liveWalletROI < 0.01 && liveWalletROI > 0 ? 4 : 2)}</p>
-                <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-tighter italic">USDT</span>
+                <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-tighter italic">$</span>
               </div>
               
               <div className="mt-2 pt-2 border-t border-white/5 space-y-1">
@@ -1338,7 +1338,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Level Income</span>
               <div className="flex items-baseline gap-2">
                 <p className="text-3xl font-mono font-black text-white tracking-tighter">${(wallet.level_income || 0).toFixed((wallet.level_income || 0) < 0.01 && (wallet.level_income || 0) > 0 ? 4 : 2)}</p>
-                <span className="text-[10px] font-bold text-purple-400 uppercase tracking-tighter italic">USDT</span>
+                <span className="text-[10px] font-bold text-purple-400 uppercase tracking-tighter italic">$</span>
               </div>
             </div>
             <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
@@ -1361,7 +1361,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Sponsor Income</span>
               <div className="flex items-baseline gap-2">
                 <p className="text-3xl font-mono font-black text-white tracking-tighter">${(wallet.direct_income || 0).toFixed((wallet.direct_income || 0) < 0.01 && (wallet.direct_income || 0) > 0 ? 4 : 2)}</p>
-                <span className="text-[10px] font-bold text-amber-400 uppercase tracking_tighter italic">USDT</span>
+                <span className="text-[10px] font-bold text-amber-400 uppercase tracking_tighter italic">$</span>
               </div>
             </div>
             <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
