@@ -1270,7 +1270,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                   </div>
 
                   <div className="space-y-4">
-                    <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-2">Level Income ($) - Level 1 to 10</label>
+                    <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-2">Level Income (%) - Level 1 to 10</label>
                     <div className="grid grid-cols-5 gap-4">
                       {(() => {
                         let percents = editingPackage.level_income_percents;
@@ -1485,7 +1485,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user, onLogout }) => {
                                ? (() => { try { return JSON.parse(pkg.level_income_percents); } catch (e) { return []; } })() 
                                : [])
                            ).slice(0, 5).map((p, i) => (
-                             <span key={i} className="text-[7px] bg-white/5 px-1 rounded text-slate-300">${p}</span>
+                             <span key={i} className="text-[7px] bg-white/5 px-1 rounded text-slate-300">{p}%</span>
                            ))}
                           <span className="text-[7px] text-slate-500">...</span>
                         </div>

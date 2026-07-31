@@ -1221,8 +1221,9 @@ export const mockApi = {
       for (let level = 1; level <= 10; level++) {
         if (!currentParentId || currentParentId === '0') break;
         
-        // Use Dynamic Level Income Flat Dollar Value from Package
-        const levelAmount = pkg.level_income_percents?.[level - 1] !== undefined ? Number(pkg.level_income_percents[level - 1]) : 0;
+        // Use Dynamic Level Income Percentage from Package
+        const levelPercent = pkg.level_income_percents?.[level - 1] !== undefined ? Number(pkg.level_income_percents[level - 1]) : 0;
+        const levelAmount = Number(((pkg.price * levelPercent) / 100).toFixed(4));
 
         const parent = users.find(u => u.id === currentParentId);
         if (parent) {

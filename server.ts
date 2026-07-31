@@ -1082,19 +1082,22 @@ app.post('/api/purchase-package', verifyAuth, async (req: any, res: any) => {
         let currLevelId = profile.referredBy || '1';
         for (let l = 1; l <= Math.min(10, levelPercents.length); l++) {
             if (!currLevelId || currLevelId === '0' || currLevelId === userId) break;
-            const depthAmt = Number(levelPercents[l - 1] || 0);
-            if (depthAmt > 0) {
-                const limit = await getUserLevelIncomeLimit(currLevelId);
-                if (l <= limit) {
-                    // Check if level recipient's package price is at least the purchased package price
-                    const levelUserMaxPrice = await getUserMaxActivePackagePrice(currLevelId);
-                    if (levelUserMaxPrice >= price) {
-                        await distributeIncomeServer(currLevelId, depthAmt, 'level_income', `Level ${l} commission: Node $${price} from ${profile.name}`, userId, l);
+            const depthVal = Number(levelPercents[l - 1] || 0);
+            if (depthVal > 0) {
+                const depthAmt = Number(((price * depthVal) / 100).toFixed(4));
+                if (depthAmt > 0) {
+                    const limit = await getUserLevelIncomeLimit(currLevelId);
+                    if (l <= limit) {
+                        // Check if level recipient's package price is at least the purchased package price
+                        const levelUserMaxPrice = await getUserMaxActivePackagePrice(currLevelId);
+                        if (levelUserMaxPrice >= price) {
+                            await distributeIncomeServer(currLevelId, depthAmt, 'level_income', `Level ${l} commission (${depthVal}% of $${price} from ${profile.name})`, userId, l);
+                        } else {
+                            console.log(`[Level Income Skip] User ${currLevelId} has max package price ${levelUserMaxPrice} which is less than purchased package price ${price}`);
+                        }
                     } else {
-                        console.log(`[Level Income Skip] User ${currLevelId} has max package price ${levelUserMaxPrice} which is less than purchased package price ${price}`);
+                        console.log(`[Level Income Locked] Skipped level ${l} payout for user ${currLevelId} because their level limit is ${limit}`);
                     }
-                } else {
-                    console.log(`[Level Income Locked] Skipped level ${l} payout for user ${currLevelId} because their level limit is ${limit}`);
                 }
             }
             if (currLevelId === '1') break;
